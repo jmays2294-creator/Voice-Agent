@@ -52,7 +52,14 @@ allowlist.
 `loop_runs` · `os_control` · `os_schedule` · `owner_requests` ·
 `owner_reminders` · `lane_claims` · `decisions` · `app_improvements` ·
 `workspace_improvements` · `app_e2e_runs` · `workspace_e2e_runs` · `ideas` ·
-`registry` · `content_queue`
+`registry` · `content_queue` · `voice_audit`
+
+**Written by the daemon itself** (not by a voice turn — these are the audit
+trail, and Rule 7 requires them):
+
+`loop_runs` (one row per session) · `voice_audit` (one row per action and per
+refusal) · `voice_turns` (per-turn latency for the dashboard — **timings only;
+the table has no text column, so it cannot carry speech**)
 
 **Explicitly out of scope — Desk does not read these at all.** They carry PHI,
 privileged material, or credentials, and a voice agent has no business in any
@@ -102,7 +109,7 @@ Seventeen actions. Everything else does not exist.
 | `queue.list [queue]` | Items waiting on Joel |
 | `queue.show <id>` | One item in full, with its risk class |
 | `owner.requests` | Open owner requests and reminders |
-| `health.check` | Daemon self-check |
+| `health.check` | Daemon self-check — runs locally, touches no table |
 | `audit.recent [window]` | Recent voice audit rows, including denials |
 
 ### Write (explicit confirmation word required)

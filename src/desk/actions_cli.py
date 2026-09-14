@@ -78,7 +78,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if action.writes:
-            if not parsed.flags.get("confirm"):
+            # Mirror the allowlist's own rule rather than inventing a stricter
+            # one here: `validate` above already refuses an unconfirmed action
+            # that declares needs_confirm. A blanket "every write needs a
+            # confirm word" looked safer and was not — it silently made
+            # note.write and reminder.add unexecutable, because neither
+            # declares a confirm flag at all.
+            if action.needs_confirm and not parsed.flags.get("confirm"):
                 return _fail(f"{name} is risk {action.risk} and was not confirmed")
             result = _execute_write(name, action, parsed, audit)
         else:
@@ -112,12 +118,29 @@ def _parse(rest: list[str]) -> _Parsed:
 
 
 def _execute_read(name: str, parsed: _Parsed, audit: Audit) -> dict:
+    if name == "health.check":
+        # Local only. A health check that needs the network cannot tell you the
+        # network is down.
+        from desk import health
+
+        report = health.run()
+        audit.action(name, ACTIONS[name].risk, asked=name, argv=[name],
+                     outcome="ok" if not report.failed else "failing")
+        return {"ok": True, "action": name, "say": report.spoken(), **report.as_dict()}
+
     table, query = _READ_QUERIES[name]
     if name == "queue.show":
         query += f"&id=eq.{parsed.positional[0]}"
     if name == "lane.status" and parsed.positional:
         query += f"&lane=eq.{parsed.positional[0]}"
     rows = _select(audit, table, query)
+    # Rule 7: every action the allowlist permitted writes an audit row, reads
+    # included. A read is how a case number reaches a room, so "it only looked"
+    # is not a reason to leave it unreconstructable.
+    audit.action(name, ACTIONS[name].risk,
+                 asked=" ".join([name, *parsed.positional]),
+                 argv=[name, *parsed.positional],
+                 outcome=f"{len(rows)} row(s)")
     return {"ok": True, "action": name, "rows": rows, "count": len(rows)}
 
 

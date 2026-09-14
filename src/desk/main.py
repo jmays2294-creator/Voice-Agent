@@ -32,6 +32,10 @@ class TurnTiming:
     first_sentence_ms: float = 0.0
     first_audio_ms: float = 0.0
     total_ms: float = 0.0
+    sentences: int = 0
+    tool_calls: int = 0
+    barge_in: bool = False
+    rebuilt: bool = False
 
 
 class Desk:
@@ -79,9 +83,23 @@ class Desk:
 
     # --- the turn --------------------------------------------------------
 
+    def _ship_timing(self, timing: TurnTiming) -> None:
+        self.audit.turn(
+            total_ms=timing.total_ms,
+            release_to_text_ms=timing.release_to_text_ms or None,
+            first_token_ms=timing.first_token_ms or None,
+            first_sentence_ms=timing.first_sentence_ms or None,
+            first_audio_ms=timing.first_audio_ms or None,
+            sentences=timing.sentences,
+            tool_calls=timing.tool_calls,
+            barge_in=timing.barge_in,
+            rebuilt=timing.rebuilt,
+        )
+
     async def _handle_turn(self) -> None:
         timing = TurnTiming()
         started = time.perf_counter()
+        rebuilds_before = self.brain.rebuilds
         try:
             capture = await asyncio.to_thread(self.ears.transcribe)
         except Exception as exc:
@@ -107,6 +125,7 @@ class Desk:
             await self._speak_answer(text, timing)
         except asyncio.CancelledError:
             # Barge-in mid-answer. The turn is abandoned, not consumed.
+            timing.barge_in = True
             with contextlib.suppress(Exception):
                 await self.brain.settle()
             raise
@@ -116,9 +135,18 @@ class Desk:
             await self._speak_denials()
             signals.set_state(signals.IDLE)
             timing.total_ms = (time.perf_counter() - started) * 1000
+            stats = self.brain.last
+            if stats is not None:
+                timing.sentences = stats.sentences
+                timing.tool_calls = stats.tool_calls
+            timing.rebuilt = self.brain.rebuilds > rebuilds_before
             self.timings.append(timing)
             signals.set_metrics(total_ms=timing.total_ms,
                                 first_audio_ms=timing.first_audio_ms)
+            # Timings go to the dashboard. Shipping is best effort and spools
+            # offline; a dropped metric must never cost a turn.
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(self._ship_timing, timing)
             self.turns += 1
 
     async def _speak_answer(self, text: str, timing: TurnTiming) -> None:

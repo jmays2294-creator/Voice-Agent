@@ -6,6 +6,15 @@ number or a claimant name must never come to rest.
 
 Patterns are deliberately over-broad. A redaction that eats an innocent string
 costs a confusing log line; one that misses costs a privilege problem.
+
+A caveat worth stating plainly, because it shapes the design elsewhere:
+**redacting an arbitrary person's name from free text is not reliably
+possible.** "Jane Roe" and "Lane Kick" are the same shape. The rules below
+catch names that carry a role marker, which covers dictation, and nothing
+catches a bare name in a sentence. So free text is never put into an audit row
+in the first place — `desk.actions_cli` composes audit rows from the action
+name and its validated arguments, and a note's body goes only to the table
+Joel reads it from. Redaction is the second line, not the first.
 """
 
 from __future__ import annotations
@@ -38,8 +47,13 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     # "Surname v. Employer", "In the Matter of ...", "Claimant: Name"
     ("[caption]", re.compile(r"\b[A-Z][A-Za-z'\-]{1,30}\s+v\.?s?\.?\s+[A-Z][A-Za-z'\-&., ]{2,60}")),
     ("[caption]", re.compile(r"(?i)\bin the matter of\s+[^,.\n]{2,80}")),
+    # The separator is optional: "claimant Jane Roe" is at least as common in
+    # dictation as "claimant: Jane Roe", and requiring the colon let the first
+    # form through.
     ("[name]", re.compile(r"(?i)\b(?:claimant|injured worker|petitioner|respondent|"
-                          r"employer|carrier|deponent)\s*[:\-]\s*[A-Z][^\n,;]{1,60}")),
+                          r"employer|carrier|deponent|patient|insured|decedent)\b"
+                          r"\s*[:\-]?\s*(?:(?:mr|mrs|ms|dr|prof)\.?\s+)?"
+                          r"[A-Z][A-Za-z\'\-]+(?:\s+[A-Z][A-Za-z\'\-]+){0,2}")),
 
     # --- contact details --------------------------------------------------
     ("[email]", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),

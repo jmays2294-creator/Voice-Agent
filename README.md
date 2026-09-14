@@ -16,6 +16,7 @@ model exchange itself.
 | [`SUPPLY_CHAIN.md`](SUPPLY_CHAIN.md) | The dependency floor and why each package is on it. |
 | [`docs/FINDINGS.md`](docs/FINDINGS.md) | Five things that need Joel's decision, not the daemon's. |
 | [`ACCEPTANCE.md`](ACCEPTANCE.md) | The acceptance list, line by line, with honest status. |
+| [`dashboard/`](dashboard/) | The owner dashboard voice section, shipped as a patch for `admin-thecompdesk`. |
 
 ## The shape of it
 
@@ -58,7 +59,7 @@ actively trying to override.
   it.
 
 ```sh
-python3 -m pytest tests/           # 280 tests, guard first
+python3 -m pytest tests/           # 299 tests, guard first
 python3 scripts/voice_agent_health.py
 ```
 

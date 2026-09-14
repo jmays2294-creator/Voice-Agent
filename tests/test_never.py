@@ -95,11 +95,48 @@ def test_no_module_that_touches_speech_can_reach_the_network():
     assert offenders == [], offenders
 
 
-def test_the_transcript_never_reaches_an_audit_row():
-    """Audit records what ran, never what was said."""
+def test_the_latency_row_can_only_carry_numbers():
+    """voice_turns has no text column. This asserts the client agrees: every
+    parameter of Audit.turn is a number or a boolean, so a transcript cannot
+    reach the dashboard even by mistake."""
+    tree = ast.parse((REPO / "src/desk/audit.py").read_text())
+    turn = next(n for n in ast.walk(tree)
+                if isinstance(n, ast.FunctionDef) and n.name == "turn")
+    allowed = {"float", "int", "bool", "float | None", "int | None"}
+    params = [a for a in turn.args.args + turn.args.kwonlyargs if a.arg != "self"]
+    assert params, "Audit.turn takes no parameters — did it move?"
+    for arg in params:
+        assert arg.annotation is not None, f"turn({arg.arg}) is unannotated"
+        ann = ast.unparse(arg.annotation)
+        assert ann in allowed, f"turn({arg.arg}: {ann}) could carry text"
+
+
+def test_no_audit_path_can_see_captured_speech():
+    """Audit records what ran, never what was said. The audit module has no
+    route to the capture object at all."""
     body = (REPO / "src/desk/audit.py").read_text()
-    assert "transcript" not in body.lower()
-    assert "capture.text" not in body
+    for needle in ("capture.text", "Capture", "desk.ears", "from .ears", "transcribe"):
+        assert needle not in body, f"audit.py reaches speech via {needle}"
+
+
+def test_the_turn_shipper_forwards_only_timing_fields():
+    """main._ship_timing is the one place a turn becomes a database row."""
+    tree = ast.parse((REPO / "src/desk/main.py").read_text())
+    fn = next(n for n in ast.walk(tree)
+              if isinstance(n, ast.FunctionDef) and n.name == "_ship_timing")
+    call = next(n for n in ast.walk(fn) if isinstance(n, ast.Call))
+    forwarded = {ast.unparse(kw.value) for kw in call.keywords}
+    # Every argument is read off the TurnTiming dataclass, which is numbers and
+    # booleans only — never off the capture or the brain's text.
+    assert all(v.startswith("timing.") for v in forwarded), forwarded
+
+
+def test_turn_timing_holds_no_strings():
+    from dataclasses import fields
+
+    from desk.main import TurnTiming
+    for f in fields(TurnTiming):
+        assert f.type in ("float", "int", "bool"), f"TurnTiming.{f.name}: {f.type}"
 
 
 # --- no audio ever persists ----------------------------------------------

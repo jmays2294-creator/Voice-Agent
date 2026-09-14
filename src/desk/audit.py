@@ -189,6 +189,36 @@ class Audit:
             "decision": "allow",
         })
 
+    def turn(self, *, total_ms: float, release_to_text_ms: float | None = None,
+             first_token_ms: float | None = None, first_sentence_ms: float | None = None,
+             first_audio_ms: float | None = None, sentences: int = 0,
+             tool_calls: int = 0, barge_in: bool = False, rebuilt: bool = False) -> None:
+        """One row per turn, for the dashboard's latency panel.
+
+        Timings only. The row is built from keyword arguments that are all
+        numbers or booleans, and the table it lands in has no text column, so
+        there is no path by which a transcript could arrive here even by
+        mistake. Rule 4 holds structurally rather than by care.
+        """
+        def ms(value: float | None) -> int | None:
+            # A stage that did not happen stays null. Zero-filling would drag
+            # the dashboard percentiles down and make the contract look met.
+            return None if value is None else max(0, round(value))
+
+        self._post("voice_turns", {
+            "at": _now(),
+            "run_id": self._run_id,
+            "release_to_text_ms": ms(release_to_text_ms),
+            "first_token_ms": ms(first_token_ms),
+            "first_sentence_ms": ms(first_sentence_ms),
+            "first_audio_ms": ms(first_audio_ms),
+            "total_ms": ms(total_ms) or 0,  # never null: the table requires it
+            "sentences": int(sentences),
+            "tool_calls": int(tool_calls),
+            "barge_in": bool(barge_in),
+            "rebuilt": bool(rebuilt),
+        })
+
     def denial(self, tool: str, rule: str, reason: str, spoken: bool) -> None:
         self._post(AUDIT_TABLE, {
             "source": SOURCE,
