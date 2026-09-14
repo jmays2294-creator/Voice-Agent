@@ -202,7 +202,8 @@ class Desk:
         grant.revoke()
         with contextlib.suppress(Exception):
             self.audit.ship_decision_log()
-        self.audit.end_session(self.turns, error)
+        actions = sum(t.tool_calls for t in self.timings)
+        self.audit.end_session(self.turns, error, actions=actions)
         await self.brain.disconnect()
         signals.set_state(signals.IDLE)
 

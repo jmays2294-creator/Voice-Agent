@@ -172,6 +172,16 @@ def check_hygiene(report: Report) -> None:
         mode = oct(log.stat().st_mode)[-3:]
         report.add(PASS if mode == "600" else FAIL, "decision log is owner-only", mode)
 
+    # A row the database refused will be refused identically forever. It is a
+    # schema or credential problem wearing the costume of a quiet daemon.
+    rejected = paths.dead_letter()
+    if rejected.exists() and rejected.stat().st_size > 0:
+        n = len([x for x in rejected.read_text().splitlines() if x.strip()])
+        report.add(FAIL, "audit rows the database refused",
+                   f"{n} in {rejected.name} — these are NOT retried; read the file")
+    else:
+        report.add(PASS, "no audit rows refused")
+
 
 def run(p95_budget_ms: int = 1800) -> Report:
     report = Report()

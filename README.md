@@ -15,6 +15,7 @@ model exchange itself.
 | [`VOICE_SURFACE.md`](VOICE_SURFACE.md) | What is in scope, what is deliberately not, and the exact write allowlist. |
 | [`SUPPLY_CHAIN.md`](SUPPLY_CHAIN.md) | The dependency floor and why each package is on it. |
 | [`docs/FINDINGS.md`](docs/FINDINGS.md) | Five things that need Joel's decision, not the daemon's. |
+| [`LAUNCH.md`](LAUNCH.md) | The launch runbook for the Mac, gate by gate. |
 | [`ACCEPTANCE.md`](ACCEPTANCE.md) | The acceptance list, line by line, with honest status. |
 | [`dashboard/`](dashboard/) | The owner dashboard voice section — it lives in `admin-thecompdesk`; this points at the branch. |
 

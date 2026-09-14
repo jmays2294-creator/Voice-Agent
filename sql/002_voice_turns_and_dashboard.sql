@@ -109,13 +109,15 @@ begin
         'finished_at',  r.finished_at,
         'status',       r.status,
         'notes',        r.notes,
+        -- end_session puts the real failure message here, not in notes.
+        'error',        r.error,
         'turns',        (select count(*) from public.voice_turns t where t.run_id = r.id),
         'age_minutes',  round(extract(epoch from (now() - r.started_at)) / 60)::int,
         'stale',        (r.status = 'running'
                          and r.started_at < now() - interval '6 hours')
       )
       from public.loop_runs r
-      where r.loop = 'desk-voice'
+      where r.loop = 'mac-desk-voice'
       order by r.started_at desc
       limit 1
     ), 'null'::jsonb),
@@ -123,15 +125,17 @@ begin
     'sessions', (
       select jsonb_build_object(
         'total',   count(*),
-        'passed',  count(*) filter (where status = 'passed'),
-        'failed',  count(*) filter (where status = 'failed'),
+        -- loop_runs uses pass/fail/noop/partial, not passed/failed.
+        'passed',  count(*) filter (where status = 'pass'),
+        'failed',  count(*) filter (where status in ('fail', 'partial')),
+        'noop',    count(*) filter (where status = 'noop'),
         -- A row still marked running and older than six hours is a silent
         -- failure, not a long job.
         'stalled', count(*) filter (where status = 'running'
                                       and started_at < now() - interval '6 hours')
       )
       from public.loop_runs
-      where loop = 'desk-voice' and started_at >= v_since
+      where loop = 'mac-desk-voice' and started_at >= v_since
     ),
 
     'latency', (

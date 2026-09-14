@@ -4,6 +4,7 @@ Two properties matter here. Rule 7: every permitted action is reconstructable,
 reads included. Rule 4: the latency feed carries numbers and nothing else.
 """
 import json
+from pathlib import Path
 
 import pytest
 
@@ -221,3 +222,139 @@ def test_a_write_that_declares_a_confirmation_still_demands_one(sandbox, monkeyp
     paths.ensure_dirs()
     monkeypatch.setattr(cli.cfg_mod, "load", lambda: cli.cfg_mod.Config(supabase_host=""))
     assert cli.main(["queue.approve", "item-12"]) != 0
+
+
+# --- the live schema, pinned -------------------------------------------------
+# Read off the real public.loop_runs on 2026-09-14. Three bugs shipped past code
+# review because nothing here was checked against it: a `source` column that
+# does not exist, and status values of passed/failed where the table uses
+# pass/fail/noop/partial. Every one of them would have 400'd on the first
+# session and — before the dead-letter handling — spooled forever, looking
+# exactly like a daemon nobody had spoken to.
+
+LOOP_RUNS_COLUMNS = {
+    "id", "loop", "dept", "started_at", "finished_at", "status", "items_in",
+    "items_out", "gate_failures", "notes", "error", "session_url", "host",
+    "created_at", "routine",
+}
+LOOP_RUNS_STATUSES = {"running", "pass", "fail", "noop", "partial"}
+
+
+def _posted(audit, sandbox, table):
+    return [r["row"] for r in spooled(sandbox) if r["table"] == table]
+
+
+def test_session_rows_use_only_columns_that_exist(audit, sandbox):
+    audit.start_session()
+    audit.end_session(turns=4, actions=2)
+    rows = _posted(audit, sandbox, "loop_runs")
+    assert rows, "no loop_runs row was written"
+    for row in rows:
+        unknown = set(row) - LOOP_RUNS_COLUMNS
+        assert not unknown, f"loop_runs has no column(s): {sorted(unknown)}"
+
+
+def test_session_rows_use_the_real_status_vocabulary(audit, sandbox):
+    audit.start_session()
+    audit.end_session(turns=4, actions=2)
+    for row in _posted(audit, sandbox, "loop_runs"):
+        assert row["status"] in LOOP_RUNS_STATUSES, f"unknown status {row['status']!r}"
+
+
+@pytest.mark.parametrize("turns,error,expected", [
+    (4, None, "pass"),
+    (0, None, "noop"),     # ran and did nothing != answered nine questions
+    (4, "boom", "fail"),
+    (0, "boom", "fail"),
+])
+def test_session_status_reflects_what_actually_happened(audit, sandbox, turns, error, expected):
+    audit.start_session()
+    audit.end_session(turns=turns, error=error, actions=0)
+    assert _posted(audit, sandbox, "loop_runs")[-1]["status"] == expected
+
+
+def test_an_error_goes_to_the_error_column_not_the_notes(audit, sandbox):
+    audit.start_session()
+    audit.end_session(turns=1, error="the transcriber died")
+    row = _posted(audit, sandbox, "loop_runs")[-1]
+    assert "transcriber" in row["error"]
+    assert "transcriber" not in (row["notes"] or "")
+
+
+def test_the_daemon_identifies_itself_as_a_mac_loop(audit, sandbox):
+    audit.start_session()
+    row = _posted(audit, sandbox, "loop_runs")[0]
+    assert row["loop"] == "mac-desk-voice" and row["host"] == "mac"
+
+
+def test_the_dashboard_rpc_queries_the_same_loop_name():
+    """The daemon writing one name and the dashboard reading another is a whole
+    screen of zeros and no error anywhere."""
+    from desk.audit import LOOP_NAME
+    sql = (Path(__file__).resolve().parents[1]
+           / "sql" / "002_voice_turns_and_dashboard.sql").read_text()
+    assert f"loop = '{LOOP_NAME}'" in sql
+    # The JSON output keys are `passed`/`failed` — that is the dashboard's
+    # vocabulary and it is fine. What must not appear is a COMPARISON against
+    # a status value the table never stores.
+    import re
+    for bad in re.finditer(r"status\s*(?:=|in)\s*\(?\s*'(\w+)'", sql):
+        assert bad.group(1) in LOOP_RUNS_STATUSES, \
+            f"the RPC filters on status {bad.group(1)!r}, which loop_runs never stores"
+
+
+# --- a rejected row is loud, not queued -------------------------------------
+
+def _http_error(code, body=b'{"message":"column does not exist"}'):
+    import io
+    import urllib.error
+    return urllib.error.HTTPError("https://h/rest/v1/x", code, "Bad Request",
+                                  {}, io.BytesIO(body))
+
+
+def test_a_rejected_row_is_dead_lettered_never_retried(sandbox, monkeypatch):
+    """A 400 will be a 400 forever. Spooling it retries it every boot and looks
+    exactly like a quiet daemon."""
+    from desk import audit as audit_mod
+
+    paths.ensure_dirs()
+    a = audit_mod.Audit(host="proj.supabase.co")
+    monkeypatch.setenv("DESK_SUPABASE_KEY", "not-a-real-key")
+    monkeypatch.setattr(audit_mod, "open_https",
+                        lambda req, timeout: (_ for _ in ()).throw(_http_error(400)))
+    a.start_session()
+
+    assert spooled(sandbox) == [], "a rejected row was queued for retry"
+    dead = paths.dead_letter()
+    assert dead.exists(), "a rejected row vanished"
+    rec = json.loads(dead.read_text().splitlines()[0])
+    assert rec["status"] == 400 and rec["table"] == "loop_runs"
+    assert oct(dead.stat().st_mode)[-3:] == "600"
+
+
+def test_a_transient_failure_is_still_queued(sandbox, monkeypatch):
+    from desk import audit as audit_mod
+
+    paths.ensure_dirs()
+    a = audit_mod.Audit(host="proj.supabase.co")
+    monkeypatch.setenv("DESK_SUPABASE_KEY", "not-a-real-key")
+    monkeypatch.setattr(audit_mod, "open_https",
+                        lambda req, timeout: (_ for _ in ()).throw(_http_error(503)))
+    a.start_session()
+    assert spooled(sandbox), "a 503 should queue for retry"
+    assert not paths.dead_letter().exists()
+
+
+def test_health_reports_rejected_rows_as_a_failure(sandbox):
+    from desk import health
+
+    paths.ensure_dirs()
+    report = health.Report()
+    health.check_hygiene(report)
+    assert any(c.verdict == health.PASS and "refused" in c.name for c in report.checks)
+
+    paths.dead_letter().write_text(json.dumps({"table": "loop_runs"}) + "\n")
+    report = health.Report()
+    health.check_hygiene(report)
+    bad = [c for c in report.checks if c.verdict == health.FAIL]
+    assert bad and "refused" in bad[0].name

@@ -27,6 +27,8 @@ this repository.
 | ✅ | Model weights SHA-verified at boot | `tests/test_interlock_grant_weights.py`; `desk.weights.verify` raises rather than warning |
 | ✅ | Screen-lock interlock implemented and fails safe | `test_a_daemon_that_cannot_tell_treats_the_screen_as_locked`, `test_nothing_resumes_when_the_screen_unlocks` |
 
+Full launch sequence: [`LAUNCH.md`](LAUNCH.md).
+
 ## Needs the Mac — with the command that closes each line
 
 | | Line | How to close it |
@@ -36,7 +38,7 @@ this repository.
 | ⬜ | Mic verified closed at rest by a device-level check | `sh scripts/verify_mic_closed.sh` with the key released, then again with it held. It must appear only in the second. |
 | ⬜ | Screen-lock interlock verified: locked = deaf and mute | Lock the screen, hold the key, speak. Nothing should be captured or spoken, and nothing should resume on unlock. State file reads `deaf`. |
 | ⬜ | p50 ≤ 1.2s, p95 ≤ 1.8s over 20 turns, committed | `python3 scripts/bench.py --live`, then commit the regenerated `BENCH.md`. The committed file currently carries a banner saying its numbers are synthetic. |
-| ⬜ | A voice approval appears in audit with `source='voice'` | Apply `sql/001_voice_audit.sql` and `sql/002_voice_turns_and_dashboard.sql`, approve one low-risk queue item by voice, then `desk-action audit.recent`. Both files parse under the real PostgreSQL grammar (`pglast`), but neither has been run against the database. |
+| ⬜ | A voice approval appears in audit with `source='voice'` | **Both migrations are applied and verified against the live database** — RLS on, append-only, the WCB/SSN/risk/timing guards all refuse (tested in a rolled-back block, no rows left), `anon` cannot call the RPC, and the RPC returns clean nulls on empty tables. What remains is a real voice approval flowing through: approve one low-risk queue item by voice, then `desk-action audit.recent`. |
 | ⬜ | The dashboard section renders against live data | Apply the two SQL files, merge `claude/owner-dashboard-voice-section`, then open `/metrics` as owner. The section is built and type-checked but has never rendered against real rows. |
 | ⬜ | `uv.lock` hash-pinned | `uv lock` on the Mac and commit it. Not generated here: a lockfile resolved on Linux would pin the wrong wheels for Apple Silicon and would be worse than none. |
 | ⬜ | Model weights pinned (not just verified) | `python3 scripts/pin_weights.py ~/.desk/models`, paste into `config/weights.sha256`, **then check each digest against the publisher's published digest**. Desk refuses to boot until this is done. |

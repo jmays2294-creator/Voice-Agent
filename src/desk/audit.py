@@ -39,8 +39,18 @@ def open_https(req, timeout: float):
 
 
 AUDIT_TABLE = "voice_audit"
+TURNS_TABLE = "voice_turns"
 RUNS_TABLE = "loop_runs"
 SOURCE = "voice"
+
+# Conventions read off the live loop_runs table, not guessed. Getting any of
+# these wrong is a 400 on every insert, which — before the dead-letter handling
+# below — would have spooled forever and looked exactly like a quiet daemon.
+LOOP_NAME = "mac-desk-voice"     # mac-* is the prefix the Mac-hosted loops use
+DEPT = "chief_of_staff"
+HOST = "mac"
+#: The status vocabulary loop_runs actually uses. Not passed/failed.
+STATUS_RUNNING, STATUS_PASS, STATUS_FAIL, STATUS_NOOP = "running", "pass", "fail", "noop"
 
 
 class CredentialUnavailable(RuntimeError):
@@ -110,11 +120,39 @@ class Audit:
             with open_https(req, self.timeout) as resp:
                 payload = json.loads(resp.read() or b"[]")
                 return payload[0] if isinstance(payload, list) and payload else None
+        except urllib.error.HTTPError as exc:
+            if 400 <= exc.code < 500:
+                # A rejected row will be rejected identically forever: a column
+                # that does not exist, a status value outside the check
+                # constraint, a revoked key. Spooling it would retry it every
+                # boot and look exactly like a quiet daemon — which is the
+                # silent-failure class this whole project exists to avoid. So it
+                # goes to a dead-letter file that health.check reports as FAIL.
+                self._reject(table, row, exc)
+                return None
+            self._spool(table, row)
+            return None
         except (urllib.error.URLError, TimeoutError, ValueError, OSError):
             # Network loss is a queue, not a dropped audit row. Rule 7 does not
             # get suspended because the wifi dropped.
             self._spool(table, row)
             return None
+
+    def _reject(self, table: str, row: dict, exc) -> None:
+        """Record a row the database refused. Loud, and never retried."""
+        try:
+            detail = exc.read().decode("utf-8", "replace")[:500]
+        except Exception:
+            detail = ""
+        record = {"at": time.time(), "table": table, "status": getattr(exc, "code", None),
+                  "detail": redact(detail), "row": redact_obj(row)}
+        try:
+            paths.log_dir().mkdir(parents=True, exist_ok=True)
+            p = paths.dead_letter()
+            with open(os.open(p, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a") as fh:
+                fh.write(json.dumps(record, separators=(",", ":"), default=str) + "\n")
+        except Exception:
+            pass
 
     def _spool(self, table: str, row: dict) -> None:
         try:
@@ -152,26 +190,43 @@ class Audit:
 
     def start_session(self, note: str = "") -> str | None:
         row = {
-            "loop": "desk-voice",
-            "status": "running",
+            "loop": LOOP_NAME,
+            "dept": DEPT,
+            "host": HOST,
+            "status": STATUS_RUNNING,
             "started_at": _now(),
-            "source": SOURCE,
             "notes": redact(note) if note else None,
         }
         result = self._post(RUNS_TABLE, row)
         self._run_id = (result or {}).get("id")
         return self._run_id
 
-    def end_session(self, turns: int, error: str | None = None) -> None:
+    def end_session(self, turns: int, error: str | None = None,
+                    actions: int = 0) -> None:
+        """Close the row. A session with no turns is a noop, not a pass —
+        cd-chief-of-staff reads these, and "ran and did nothing" and "answered
+        nine questions" should not look the same."""
+        if error:
+            status = STATUS_FAIL
+        elif turns == 0:
+            status = STATUS_NOOP
+        else:
+            status = STATUS_PASS
         row = {
-            "status": "failed" if error else "passed",
+            "status": status,
             "finished_at": _now(),
-            "notes": redact(error)[:500] if error else f"{turns} turns",
+            "items_in": int(turns),
+            "items_out": int(actions),
+            "notes": f"{turns} turn{'s' if turns != 1 else ''}",
+            "error": redact(error)[:500] if error else None,
         }
         if self._run_id:
             self._post(RUNS_TABLE, row, method="PATCH", params=f"?id=eq.{self._run_id}")
         else:
-            self._spool(RUNS_TABLE, {**row, "loop": "desk-voice", "source": SOURCE})
+            # No run id means the opening insert never landed. Record the close
+            # anyway, with the identity columns it needs to stand alone.
+            self._spool(RUNS_TABLE, {**row, "loop": LOOP_NAME, "dept": DEPT,
+                                     "host": HOST, "started_at": _now()})
 
     def action(self, name: str, risk: str, asked: str, argv: list[str],
                outcome: str, changed: str | None = None) -> None:
@@ -205,7 +260,7 @@ class Audit:
             # the dashboard percentiles down and make the contract look met.
             return None if value is None else max(0, round(value))
 
-        self._post("voice_turns", {
+        self._post(TURNS_TABLE, {
             "at": _now(),
             "run_id": self._run_id,
             "release_to_text_ms": ms(release_to_text_ms),

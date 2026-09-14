@@ -56,6 +56,13 @@ def decision_log() -> Path:
     return log_dir() / "decisions.jsonl"
 
 
+def dead_letter() -> Path:
+    """Rows the database refused. A 4xx never succeeds on replay, so these are
+    recorded loudly rather than retried forever. health.check reports a
+    non-empty file as a FAIL."""
+    return log_dir() / "audit-rejected.jsonl"
+
+
 def speak_queue() -> Path:
     """Denials the daemon has not yet spoken."""
     return state_dir() / "speak-queue.jsonl"
