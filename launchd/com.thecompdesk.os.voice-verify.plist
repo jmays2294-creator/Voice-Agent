@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  mac-voice-verify — the only loop with a microphone.
+
+  01:00 ET nightly. Joel is asleep; the Mac is free until 05:00. Everything the
+  cloud loops cannot prove — latency, barge-in, the screen-lock interlock,
+  mic-closed-at-rest, no-audio-at-rest — happens here.
+
+  Paths are placeholders substituted by scripts/install_mac_loops.sh at install
+  time, so no absolute home path is committed.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.thecompdesk.os.voice-verify</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-lc</string>
+    <string>__DESK_REPO__/scripts/mac_loop.sh voice-verify-mac</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>1</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+
+  <!-- Audio and the event tap need the GUI session. -->
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+
+  <key>ProcessType</key>
+  <string>Standard</string>
+
+  <!-- A verify run that overruns its window is a bug, not a long night. Five
+       hours is the whole window; past that it is wedged and should be killed
+       rather than left holding the microphone into Joel's morning. -->
+  <key>ExitTimeOut</key>
+  <integer>14400</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>__DESK_LOGS__/voice-verify.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__DESK_LOGS__/voice-verify.err.log</string>
+</dict>
+</plist>
