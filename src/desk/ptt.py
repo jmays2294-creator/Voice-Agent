@@ -14,6 +14,7 @@ from __future__ import annotations
 import platform
 import threading
 from collections.abc import Callable
+from typing import ClassVar
 
 Callback = Callable[[], None]
 
@@ -70,7 +71,7 @@ class DarwinPushToTalk(BasePushToTalk):
     #: Modifier keycodes and the flag each one sets. A modifier never produces
     #: key-down/key-up, only a flags-changed event, so hold-to-talk on one of
     #: these needs the matching mask.
-    MODIFIER_MASKS = {
+    MODIFIER_MASKS: ClassVar[dict[int, str]] = {
         63: "kCGEventFlagMaskSecondaryFn",   # fn / globe
         54: "kCGEventFlagMaskCommand",       # right command
         55: "kCGEventFlagMaskCommand",       # left command
