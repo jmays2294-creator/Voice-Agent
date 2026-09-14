@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Desk — LaunchAgent.
+
+  Runs at login, restarts on crash, logs where the other Comp Desk jobs log.
+  Paths use a literal placeholder rather than a home directory: run
+  scripts/install_launchagent.sh, which substitutes them at install time. No
+  absolute home path is committed to this repository.
+
+  `sg _desk` puts the daemon in the group the pf anchor constrains. See
+  docs/EGRESS.md for why a LaunchAgent needs this and a LaunchDaemon does not.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.thecompdesk.desk</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/sg</string>
+    <string>_desk</string>
+    <string>__DESK_HOME__/.desk/venv/bin/desk</string>
+  </array>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+    <key>Crashed</key>
+    <true/>
+  </dict>
+
+  <!-- Back off rather than spin if it fails at boot. -->
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <!-- Audio and the event tap need the GUI session. -->
+  <key>LimitLoadToSessionType</key>
+  <string>Aqua</string>
+
+  <key>WorkingDirectory</key>
+  <string>__DESK_REPO__</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>DESK_CONFIG</key>
+    <string>__DESK_REPO__/config/desk.toml</string>
+    <key>DESK_STATE_DIR</key>
+    <string>__DESK_HOME__/.desk</string>
+    <key>DESK_WORKSPACE</key>
+    <string>__DESK_HOME__/Code</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+
+  <!-- Timings and errors. Never content — Rule 4. -->
+  <key>StandardOutPath</key>
+  <string>__DESK_LOGS__/desk.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__DESK_LOGS__/desk.err.log</string>
+</dict>
+</plist>

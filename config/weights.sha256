@@ -1,0 +1,18 @@
+# Model weights, pinned by SHA-256. Rule 5.
+#
+# A weights file that does not match its recorded hash ABORTS THE BOOT. It does
+# not warn and continue — a warning at boot is a warning nobody reads.
+#
+# These are placeholders. Desk refuses to start while any digest is all zeroes,
+# so an unfilled pin file fails loudly rather than silently accepting anything.
+#
+# To fill them in, on the Mac, after the first download:
+#     python3 scripts/pin_weights.py ~/.desk/models
+# Then check each digest against the publisher's published digest before
+# committing. Pinning what you downloaded without checking it pins the
+# compromise as readily as the original.
+#
+# Format is sha256sum's: <digest>  <path relative to ~/.desk/models>
+
+0000000000000000000000000000000000000000000000000000000000000000  whisper-small.en/weights.npz
+0000000000000000000000000000000000000000000000000000000000000000  whisper-small.en/config.json

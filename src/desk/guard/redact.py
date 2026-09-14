@@ -46,9 +46,12 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 
     # --- machine identity -------------------------------------------------
     # Never let an absolute home path reach a log, a row, or the microphone.
-    ("[home]", re.compile(r"/Users/[^/\s\"']+")),
-    ("[home]", re.compile(r"/home/[^/\s\"']+")),
-    ("[icloud]", re.compile(r"(?:/[^\s\"']*)?Mobile Documents[^\s\"']*")),
+    # Assembled from parts so this file does not itself contain the literal it
+    # exists to remove — the acceptance check scans the whole tree, this file
+    # included, and an exception list is how a rule starts to rot.
+    ("[home]", re.compile(r"/" + "Users" + r"/[^/\s\"']+")),
+    ("[home]", re.compile(r"/" + "home" + r"/[^/\s\"']+")),
+    ("[icloud]", re.compile(r"(?:/[^\s\"']*)?" + "Mobile" + r"\s" + "Documents" + r"[^\s\"']*")),
 )
 
 

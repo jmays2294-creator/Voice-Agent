@@ -1,0 +1,44 @@
+# Desk configuration. Values only — never a credential.
+# Anything secret is read from the macOS keychain at runtime, by name.
+
+# Never a bare alias: the SDK resolves aliases through its bundled CLI and can
+# quietly land on an older model. Pin the full id.
+model = "claude-opus-5"
+
+# Speech in. "auto" selects mlx on Apple Silicon (GPU) and faster-whisper
+# elsewhere (CPU). CTranslate2 has no Metal backend, so on a Mac the fallback
+# silently transcribes on the CPU — roughly 7x slower for an identical result.
+stt_backend = "auto"
+stt_model = "mlx-community/whisper-small.en-mlx"
+
+# Speech out. On-device only. There is no cloud option and no flag that adds
+# one; see THREAT_MODEL.md. "kokoro" is the opt-in quality upgrade.
+tts_backend = "avspeech"
+tts_voice = "com.apple.voice.premium.en-US.Zoe"
+tts_rate = 0.52
+
+sample_rate = 16000
+
+# Hold-to-talk keycode. 63 is fn. Never a wake word, never VAD-triggered.
+ptt_keycode = 63
+
+# Named, not secret — this host ships inside the iOS app. Leave empty to run
+# Desk with audit rows spooled locally instead of shipped.
+supabase_host = ""
+keychain_service = "desk-supabase"
+
+# Transcripts are memory-only by default. Turning this on writes them at mode
+# 0600, gitignored and redacted. Read THREAT_MODEL.md first.
+session_logging = false
+
+# How long a per-turn web grant lives, in seconds.
+web_grant_seconds = 90
+
+[latency]
+p50_ms = 1200
+p95_ms = 1800
+transcribe_ms = 200
+first_token_ms = 600
+first_sentence_ms = 350
+tts_first_audio_ms = 80
+device_open_ms = 50
