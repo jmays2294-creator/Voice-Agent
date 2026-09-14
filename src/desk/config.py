@@ -34,7 +34,7 @@ class Config:
     #: Never a bare alias. The SDK resolves aliases through its bundled CLI and
     #: can quietly land on an older model; pin the full id.
     model: str = "claude-opus-5"
-    stt_model: str = "mlx-community/whisper-small.en-mlx"
+    stt_model: str = "local:whisper-small.en"
     stt_backend: str = "auto"          # auto | mlx | faster-whisper
     tts_backend: str = "avspeech"      # avspeech | kokoro
     tts_voice: str = "com.apple.voice.premium.en-US.Zoe"

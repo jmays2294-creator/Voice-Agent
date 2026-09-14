@@ -9,7 +9,10 @@ model = "claude-opus-5"
 # elsewhere (CPU). CTranslate2 has no Metal backend, so on a Mac the fallback
 # silently transcribes on the CPU — roughly 7x slower for an identical result.
 stt_backend = "auto"
-stt_model = "mlx-community/whisper-small.en-mlx"
+# local:<name> resolves under the models directory Desk verifies at boot.
+# The hashed file must be the file that gets opened, so a hub repo id here
+# is refused: it would load from a cache the pins never saw.
+stt_model = "local:whisper-small.en"
 
 # Speech out. On-device only. There is no cloud option and no flag that adds
 # one; see THREAT_MODEL.md. "kokoro" is the opt-in quality upgrade.

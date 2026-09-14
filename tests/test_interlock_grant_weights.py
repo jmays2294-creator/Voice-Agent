@@ -138,3 +138,60 @@ def test_a_malformed_pin_line_is_an_error_not_a_skip(tmp_path):
     f.write_text("notahash  w.npz\n")
     with pytest.raises(WeightsError):
         load_pins(f)
+
+
+# --- the hashed file must be the opened file --------------------------------
+
+def test_local_model_resolves_under_the_verified_directory(sandbox):
+    """Rule 5 only means something if verify() and the loader point at the same
+    file. This is the join between them."""
+    from desk import paths
+    from desk.stt import resolve_model
+
+    resolved = Path(resolve_model("local:whisper-small.en"))
+    assert resolved == paths.models_dir() / "whisper-small.en"
+    assert resolved.is_relative_to(paths.models_dir())
+
+
+@pytest.mark.parametrize("model", [
+    "local:../../etc", "local:..", "local:", "local:/", "local:a/../../b",
+])
+def test_a_local_name_cannot_escape_the_models_directory(model, sandbox):
+    from desk import paths
+    from desk.stt import TranscriberUnavailable, resolve_model
+    try:
+        resolved = Path(resolve_model(model))
+    except TranscriberUnavailable:
+        return
+    assert resolved.is_relative_to(paths.models_dir()), f"{model} escaped to {resolved}"
+
+
+def test_a_hub_repo_id_is_refused_at_boot(sandbox, monkeypatch):
+    """A hub id loads from a cache the pins never saw: Desk would verify one
+    file and open another, and the check would look satisfied."""
+    from desk.config import Config
+    from desk.main import verify_boot
+
+    problems = verify_boot(Config(stt_model="mlx-community/whisper-small.en-mlx"))
+    assert any("hub cache" in p for p in problems), problems
+
+
+def test_the_shipped_config_uses_a_local_model():
+    from desk.config import load
+    from desk.stt import is_local
+    assert is_local(load().stt_model)
+
+
+def test_the_pin_file_paths_match_what_the_loader_will_open(sandbox):
+    """The names in config/weights.sha256 must be reachable from the resolved
+    model directory, or the pins cover files nothing opens."""
+    from desk.config import load
+    from desk.stt import LOCAL_PREFIX
+    from desk.weights import load_pins
+
+    pins = load_pins(Path(__file__).resolve().parents[1] / "config" / "weights.sha256")
+    model_name = load().stt_model[len(LOCAL_PREFIX):]
+    assert pins, "no pins declared"
+    for rel in pins:
+        assert rel.split("/")[0] == model_name, (
+            f"pin {rel!r} is not under the configured model directory {model_name!r}")

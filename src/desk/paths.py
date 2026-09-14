@@ -43,6 +43,12 @@ def scratch_dir() -> Path:
     return state_dir() / "scratch"
 
 
+def models_dir() -> Path:
+    """Model weights Desk verifies AND loads. Those must be the same directory:
+    hashing a file you do not open is theatre."""
+    return state_dir() / "models"
+
+
 def signals_dir() -> Path:
     return state_dir() / "signals"
 

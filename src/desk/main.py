@@ -241,9 +241,20 @@ def verify_boot(cfg: Config) -> list[str]:
         problems.append(str(exc))
     try:
         from .weights import verify
-        verify(paths.state_dir() / "models")
+        verify(paths.models_dir())
     except Exception as exc:
         problems.append(str(exc))
+
+    # A pin only means something if the hashed file is the one that gets
+    # opened. A hub repo id loads from a cache the pins never saw, so the
+    # guarantee would be void while still looking satisfied.
+    from .stt import is_local
+    if cfg.stt_backend in ("auto", "mlx") and not is_local(cfg.stt_model):
+        problems.append(
+            f"stt_model is {cfg.stt_model!r}, which loads from a hub cache rather than "
+            f"the directory the weight pins cover. Desk would verify one file and open "
+            f"another. Use local:<name> and put the model in {paths.models_dir()}."
+        )
     return problems
 
 

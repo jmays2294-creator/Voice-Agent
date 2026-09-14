@@ -51,18 +51,41 @@ uv lock                       # commit this — ACCEPTANCE.md wants it hash-pinn
 
 Desk refuses to boot until this is done. That is deliberate.
 
+The file that gets hashed has to be the file that gets opened, so the model
+lives in Desk's own directory rather than being loaded out of a hub cache the
+pins never saw. Download once, copy it in, then pin what is there.
+
 ```sh
-uv run python -c "import mlx_whisper, numpy as np; \
-  mlx_whisper.transcribe(np.zeros(16000,dtype='float32'), \
-  path_or_hf_repo='mlx-community/whisper-small.en-mlx')"   # downloads
-uv run python scripts/pin_weights.py ~/.cache/huggingface
+uv run python -c "import mlx_whisper, numpy as np; mlx_whisper.transcribe(np.zeros(16000,dtype='float32'), path_or_hf_repo='mlx-community/whisper-small.en-mlx')"
 ```
 
-Paste the digests into `config/weights.sha256`, replacing the placeholder zeros.
+```sh
+mkdir -p ~/.desk/models/whisper-small.en
+cp ~/.cache/huggingface/hub/models--mlx-community--whisper-small.en-mlx/snapshots/*/config.json ~/.desk/models/whisper-small.en/
+cp ~/.cache/huggingface/hub/models--mlx-community--whisper-small.en-mlx/snapshots/*/weights.npz ~/.desk/models/whisper-small.en/
+```
+
+```sh
+uv run python scripts/pin_weights.py ~/.desk/models
+```
+
+That prints exactly two lines, whose paths already match `config/weights.sha256`:
+
+```
+<64 hex>  whisper-small.en/config.json
+<64 hex>  whisper-small.en/weights.npz
+```
+
+Paste the two digests over the zeros in `config/weights.sha256`, keeping the
+paths as they are.
 
 **Then check each one against the publisher's published digest before
 committing.** Pinning what you downloaded without checking it pins the
 compromise exactly as readily as the original.
+
+> Point `pin_weights.py` at `~/.desk/models`, not at `~/.cache/huggingface`.
+> The cache prints snapshot-hash paths that will never match the pin file, and
+> more importantly the cache is not where Desk loads from.
 
 **Gate:** `uv run desk --check` must stop complaining about weights.
 
