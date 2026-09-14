@@ -23,7 +23,7 @@ this repository.
 | ✅ | Barge-in twenty times, no desync, no one-turn-late answers | `test_twenty_barge_ins_never_desync`, against a fake that models the SDK's shared-stream semantics faithfully |
 | ✅ | A denied action is spoken with its reason | `test_denials_are_queued_to_be_spoken` |
 | ✅ | Zero absolute home paths — neither the macOS user-directory prefix nor the iCloud container appears anywhere; zero secret values | `test_zero_absolute_home_paths`, `test_zero_secret_values` — scan the committed tree |
-| ✅ | Owner dashboard voice section: last session, p50 this week, refused actions, voice approvals | `dashboard/` — patch verified against a pristine `admin-thecompdesk` checkout, `npm run build` (strict `tsc -b`) passes from the patched tree |
+| ✅ | Owner dashboard voice section: last session, p50 this week, refused actions, voice approvals | Branch `claude/owner-dashboard-voice-section` in `admin-thecompdesk` at `a2881a6`; `npm run build` (strict `tsc -b`) passes. See `dashboard/`. |
 | ✅ | Model weights SHA-verified at boot | `tests/test_interlock_grant_weights.py`; `desk.weights.verify` raises rather than warning |
 | ✅ | Screen-lock interlock implemented and fails safe | `test_a_daemon_that_cannot_tell_treats_the_screen_as_locked`, `test_nothing_resumes_when_the_screen_unlocks` |
 
@@ -37,7 +37,7 @@ this repository.
 | ⬜ | Screen-lock interlock verified: locked = deaf and mute | Lock the screen, hold the key, speak. Nothing should be captured or spoken, and nothing should resume on unlock. State file reads `deaf`. |
 | ⬜ | p50 ≤ 1.2s, p95 ≤ 1.8s over 20 turns, committed | `python3 scripts/bench.py --live`, then commit the regenerated `BENCH.md`. The committed file currently carries a banner saying its numbers are synthetic. |
 | ⬜ | A voice approval appears in audit with `source='voice'` | Apply `sql/001_voice_audit.sql` and `sql/002_voice_turns_and_dashboard.sql`, approve one low-risk queue item by voice, then `desk-action audit.recent`. Both files parse under the real PostgreSQL grammar (`pglast`), but neither has been run against the database. |
-| ⬜ | The dashboard section renders against live data | Apply the two SQL files and land `dashboard/owner-dashboard-voice-section.patch`, then open `/metrics` as owner. The section is built and type-checked but has never rendered against real rows. |
+| ⬜ | The dashboard section renders against live data | Apply the two SQL files, merge `claude/owner-dashboard-voice-section`, then open `/metrics` as owner. The section is built and type-checked but has never rendered against real rows. |
 | ⬜ | `uv.lock` hash-pinned | `uv lock` on the Mac and commit it. Not generated here: a lockfile resolved on Linux would pin the wrong wheels for Apple Silicon and would be worse than none. |
 | ⬜ | Model weights pinned (not just verified) | `python3 scripts/pin_weights.py ~/.desk/models`, paste into `config/weights.sha256`, **then check each digest against the publisher's published digest**. Desk refuses to boot until this is done. |
 | ⬜ | Survives sleep/wake and network loss, and says so rather than hanging | Sleep the Mac mid-session; pull the network mid-turn. Audit rows spool locally and replay (`Audit.flush_spool`), but the end-to-end behaviour is untested without the hardware. |

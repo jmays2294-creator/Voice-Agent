@@ -1,37 +1,31 @@
 # Owner dashboard — voice section
 
 The voice section of the Owner Dashboard at `admin.thecompdesk.com`. It lives in
-a different repository (`jmays2294-creator/admin-thecompdesk`), so it ships from
-here as a patch.
+a different repository, so this directory is a pointer, not a copy — there is no
+second version of the code here to drift out of sync.
 
-`owner-dashboard-voice-section.patch` is the whole change. The two new files
-appear in it in full, so the patch is also the reviewable artifact — there is no
-second copy to drift out of sync.
+**Branch:** [`claude/owner-dashboard-voice-section`](https://github.com/jmays2294-creator/admin-thecompdesk/tree/claude/owner-dashboard-voice-section)
+in `jmays2294-creator/admin-thecompdesk`, at `a2881a6`.
 
-## Landing it
+Verified: `npm run build` (strict `tsc -b`, then vite) passes on that branch.
 
-```sh
-cd ~/Code/admin-thecompdesk
-git checkout -b voice-section
-git apply /path/to/Voice-Agent/dashboard/owner-dashboard-voice-section.patch
-npm run build          # tsc -b strict, then vite
-```
+## The database side goes first
 
-Verified: applies cleanly to a pristine checkout of `admin-thecompdesk` at
-`717747e`, and `npm run build` passes from the patched tree.
-
-The database side is separate, and goes first:
+The section reads one RPC, and that RPC ships from **this** repository:
 
 ```sh
 psql "$DATABASE_URL" -f sql/001_voice_audit.sql
 psql "$DATABASE_URL" -f sql/002_voice_turns_and_dashboard.sql
 ```
 
-Until those are applied the section renders a single explanatory card rather
-than a broken panel — it names the missing function specifically, so "not
-deployed yet" never reads like "the daemon is dead".
+Until they are applied the section renders a single explanatory card naming the
+missing function, rather than a broken panel — so "not deployed yet" never reads
+as "the daemon is dead".
 
-## What it changes
+Neither file has been run against the database yet. Both parse under the real
+PostgreSQL grammar; that is syntax, not execution.
+
+## What the branch changes
 
 | File | |
 |---|---|
