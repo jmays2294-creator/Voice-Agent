@@ -271,3 +271,25 @@ def test_the_configured_model_is_a_full_id():
     from desk.brain import require_pinned_model
     from desk.config import load
     require_pinned_model(load().model)
+
+
+def test_the_auth_source_log_never_carries_the_credential(monkeypatch):
+    """Rule 6: names only. A boot line that helpfully printed a prefix of the
+    key would put it in every log file the daemon writes."""
+    from desk.main import _auth_source
+
+    secret = "sk" + "-ant-" + "x" * 40
+    monkeypatch.setenv("ANTHROPIC_API_KEY", secret)
+    line = _auth_source()
+    assert "ANTHROPIC_API_KEY" in line
+    assert secret not in line
+    # Not even a fragment long enough to be useful.
+    assert not any(secret[i:i + 8] in line for i in range(len(secret) - 8))
+
+
+def test_the_auth_source_names_the_terms_question(monkeypatch):
+    from desk.main import _auth_source
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    assert "consumer" in _auth_source()

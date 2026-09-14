@@ -54,11 +54,30 @@ on `user:profile`), and that session ran in a cloud container rather than on
 the Mac in any case. `cleanupPeriodDays` was unset, i.e. the default retention
 window for local transcripts.
 
-**Fix:** run `scripts/posture_report.py` on the Mac. If it reports consumer
-terms, move Desk to commercial terms before Phase 5. Set `cleanupPeriodDays`
-explicitly and low for this project either way — Claude Code writes session
-transcripts under `~/.claude/projects/` regardless of Desk keeping its own in
-memory.
+**Partially answered, 2026-09-14.** Desk's first boot on the Mac printed:
+
+> claude.ai connectors are disabled because ANTHROPIC_API_KEY or another auth
+> source is set and takes precedence over your claude.ai login
+
+So the Mac has `ANTHROPIC_API_KEY` set, and the voice session runs on it rather
+than on the claude.ai login. That is the **good** answer to the training
+question — commercial API terms, not consumer — and it means Phase 5 is not
+blocked on the tier question the way this finding assumed.
+
+Two things it does not settle:
+
+1. **The key's own posture.** Which account and workspace it belongs to, and
+   whether that workspace has zero-retention, are separate questions from
+   which terms apply.
+2. **Local transcripts are unaffected.** `cleanupPeriodDays` still governs what
+   Claude Code writes under `~/.claude/projects/`, and that is on disk on the
+   Mac regardless of which credential is used.
+
+Desk now logs its auth source by name at every boot — never the value — so this
+is visible rather than inferred from a warning.
+
+**Still to do:** run `scripts/posture_report.py` on the Mac, confirm which
+workspace the key belongs to, and set `cleanupPeriodDays` explicitly and low.
 
 ---
 

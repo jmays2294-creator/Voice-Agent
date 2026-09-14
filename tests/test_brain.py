@@ -4,6 +4,7 @@ Barge-in is a headline feature, so the abandoned-turn path is hit on day one.
 An answer that arrives one turn late is not a crash — it is a daemon that
 confidently answers the previous question for the rest of the session.
 """
+import asyncio
 
 import pytest
 from fake_sdk import FakeClient
@@ -137,3 +138,65 @@ async def test_turn_stats_record_timings_not_content():
     assert stats.first_sentence_ms is not None
     assert stats.sentences == 2 and stats.consumed is True
     assert not any(isinstance(v, str) for v in vars(stats).values())
+
+
+# --- boot must never hang silently ------------------------------------------
+
+async def test_a_hung_prewarm_stage_times_out_and_says_so(caplog):
+    """The failure that started this: prewarm gathered three stages with no
+    timeout and no logging, so one that never returned hung the boot with no
+    output at all."""
+    import logging
+
+    from desk.main import Desk
+
+    desk = Desk.__new__(Desk)
+
+    async def never_returns():
+        await asyncio.sleep(3600)
+
+    with caplog.at_level(logging.INFO, logger="desk"):
+        ok = await Desk._stage(desk, "transcriber", never_returns(), timeout=0.05)
+    assert ok is False
+    assert "timed out" in caplog.text
+    assert "transcriber" in caplog.text
+
+
+async def test_a_failing_prewarm_stage_is_reported_not_swallowed(caplog):
+    """return_exceptions=True with the results discarded meant a stage could
+    fail completely and nothing would ever say so."""
+    import logging
+
+    from desk.main import Desk
+
+    desk = Desk.__new__(Desk)
+
+    async def explodes():
+        raise RuntimeError("no audio device")
+
+    with caplog.at_level(logging.INFO, logger="desk"):
+        ok = await Desk._stage(desk, "voice", explodes(), timeout=5)
+    assert ok is False
+    assert "no audio device" in caplog.text
+
+
+async def test_a_good_stage_reports_its_timing(caplog):
+    import logging
+
+    from desk.main import Desk
+
+    desk = Desk.__new__(Desk)
+
+    async def fine():
+        return None
+
+    with caplog.at_level(logging.INFO, logger="desk"):
+        ok = await Desk._stage(desk, "model", fine(), timeout=5)
+    assert ok is True
+    assert "prewarmed model" in caplog.text
+
+
+def test_every_prewarm_stage_has_a_finite_ceiling():
+    from desk.main import Desk
+    assert set(Desk.PREWARM_TIMEOUTS) == {"transcriber", "voice", "model"}
+    assert all(0 < t < 600 for t in Desk.PREWARM_TIMEOUTS.values())

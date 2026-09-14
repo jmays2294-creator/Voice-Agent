@@ -11,9 +11,11 @@ import argparse
 import asyncio
 import contextlib
 import logging
+import os
 import sys
 import time
 from dataclasses import dataclass
+from typing import ClassVar
 
 from . import audit as audit_mod
 from . import grant, interlock, paths, signals
@@ -167,23 +169,68 @@ class Desk:
 
     # --- lifecycle -------------------------------------------------------
 
+    #: Per-stage prewarm ceilings. Generous, because the first mlx run compiles
+    #: Metal kernels, but finite: a stage that never returns must fail loudly
+    #: rather than leave the daemon sitting there looking started.
+    PREWARM_TIMEOUTS: ClassVar[dict[str, float]] = {
+        "transcriber": 180.0, "voice": 30.0, "model": 90.0}
+
+    async def _stage(self, name: str, coro, timeout: float) -> bool:
+        """Run one boot stage, timed and announced. Never raises."""
+        log.info("prewarming %s...", name)
+        start = time.perf_counter()
+        try:
+            async with asyncio.timeout(timeout):
+                await coro
+        except (TimeoutError, asyncio.TimeoutError):
+            # No traceback: a TimeoutError's stack says nothing useful here.
+            log.error(  # noqa: TRY400
+                "prewarming %s timed out after %.3gs — continuing without it. "
+                "The first turn will be slow, or that half will not work.", name, timeout)
+            return False
+        except Exception as exc:
+            # A prewarm failure is not fatal, but it must never be silent:
+            # return_exceptions=True used to swallow these whole.
+            # Traceback wanted: this is the line that tells Joel which of
+            # PyObjC, the audio device or the model actually broke.
+            log.exception("prewarming %s failed: %s", name, type(exc).__name__)
+            return False
+        log.info("prewarmed %s in %.0fms", name, (time.perf_counter() - start) * 1000)
+        return True
+
     async def prewarm(self) -> None:
+        """Warm every stage so Joel's first sentence of the day is not the slow one.
+
+        Each stage is announced, timed and bounded. The previous version
+        gathered all three with return_exceptions=True and discarded the
+        results, so one hung stage hung the boot with no output at all and a
+        failed stage was swallowed entirely.
+        """
         signals.set_state(signals.IDLE)
-        await asyncio.gather(
-            asyncio.to_thread(self.ears.transcriber.prewarm),
-            asyncio.to_thread(self.mouth.prewarm),
-            self.brain.prewarm(),
-            return_exceptions=True,
+        log.info("prewarming (first run compiles Metal kernels; this can take a minute)")
+        results = await asyncio.gather(
+            self._stage("transcriber", asyncio.to_thread(self.ears.transcriber.prewarm),
+                        self.PREWARM_TIMEOUTS["transcriber"]),
+            self._stage("voice", asyncio.to_thread(self.mouth.prewarm),
+                        self.PREWARM_TIMEOUTS["voice"]),
+            self._stage("model", self.brain.prewarm(), self.PREWARM_TIMEOUTS["model"]),
         )
+        if not all(results):
+            log.warning("some stages did not prewarm — Desk still runs, see above")
 
     async def run(self, ptt) -> None:
         self._loop = asyncio.get_running_loop()
-        self.audit.flush_spool()
-        self.audit.start_session()
+        # Both of these are synchronous HTTPS calls. Off the loop, so a slow
+        # network delays the boot log rather than freezing the whole daemon.
+        log.info("auth source: %s", _auth_source())
+        log.info("opening the audit session...")
+        await asyncio.to_thread(self.audit.flush_spool)
+        await asyncio.to_thread(self.audit.start_session)
         self.mouth.start()
+        log.info("connecting the model session...")
         await self.brain.connect()
         await self.prewarm()
-        log.info("Desk ready. Hold the key to talk.")
+        log.info("Desk ready. Hold the key to talk. (key code %d)", self.cfg.ptt_keycode)
         error = None
         try:
             await asyncio.to_thread(ptt.run)
@@ -209,6 +256,23 @@ class Desk:
 
 
 # --- wiring ---------------------------------------------------------------
+
+def _auth_source() -> str:
+    """Which credential the model session will use. The NAME only — never the
+    value, and never enough of it to reconstruct one.
+
+    This is a threat-model fact, not a curiosity: an API key means commercial
+    API terms, while a claude.ai login on a personal plan means consumer terms,
+    and the two differ on whether conversation content may be used for
+    training. Desk's conversations are Comp Desk material and sometimes client
+    material. See docs/FINDINGS.md item 2.
+    """
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "ANTHROPIC_API_KEY (commercial API terms; overrides a claude.ai login)"
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return "CLAUDE_CODE_OAUTH_TOKEN"
+    return "claude.ai login (check the plan — consumer terms differ on training)"
+
 
 def build(cfg: Config) -> tuple[Desk, object]:
     from . import ptt as ptt_mod
