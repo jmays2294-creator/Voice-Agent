@@ -134,7 +134,9 @@ Observed from the session that built this (an ephemeral cloud container using
 Joel's OAuth account — **not his Mac**, so the Mac must be checked separately
 with `scripts/posture_report.py`):
 
-- **Account**: `jmays2294@gmail.com`, organization UUID present.
+- **Account**: Joel's personal Google account, organization UUID present.
+  (Identifiers are deliberately not written down here — this repository is
+  public. Run `scripts/posture_report.py` to see them locally.)
 - **`cleanupPeriodDays`: unset**, which means the default. Local Claude Code
   transcripts — including, on the Mac, every word Desk transcribes and every
   reply it speaks — are retained on disk for that default window.
@@ -167,8 +169,11 @@ with `scripts/posture_report.py`):
    user can write is exactly the injection source modelled above. Remediation
    SQL is in `docs/FINDINGS.md`; enabling RLS without policies blocks all
    access, so it needs a policy decision, not a blind `ALTER`.
-5. **`jmays2294-creator/Voice-Agent` is a public repository.** Rule 6 requires
-   private. See `docs/FINDINGS.md`.
+5. **`jmays2294-creator/Voice-Agent` is a public repository**, by Joel's
+   explicit decision on 2026-09-14 after the risk was put to him. Rule 6 asks
+   for private. This document, the write allowlist and the surface inventory
+   are therefore world-readable, and everything committed here is written on
+   that assumption. See `docs/FINDINGS.md` item 1.
 
 ## Residual risk accepted
 

@@ -6,23 +6,31 @@ Surfaced, not acted on. Each needs a decision that is his, not the daemon's.
 
 ## 1. `jmays2294-creator/Voice-Agent` is a public repository
 
-**Severity: blocking for push.**
+**Status: open, by decision.**
 
-Rule 6 requires a private repo under `jmays2294-creator`. The repository this
-build targets is public. It was created empty on 2026-09-14, so this looks like
-a default rather than a choice.
+Rule 6 asks for a private repo under `jmays2294-creator`. This repository is
+public. The risk was put to Joel on 2026-09-14 and he chose to push to it
+anyway, so this is a recorded decision rather than an oversight.
 
-Pushing to it as-is would publish `THREAT_MODEL.md` — a document whose whole
-purpose is to describe the attack surface of a machine holding privileged
-client material — plus the exact write allowlist and the guard's rule
-identifiers. That is a map, and it would be world-readable.
+What that means in practice: `THREAT_MODEL.md`, `VOICE_SURFACE.md`, the write
+allowlist and the guard's rule identifiers are world-readable. They are a map
+of how a machine holding privileged client material is defended. Nothing here
+is a credential — `test_zero_secret_values` fails the build if one appears, and
+no host, project reference, account identifier or email is committed — but the
+design is legible to anyone.
 
-**Fix (Joel, 30 seconds):** repository → Settings → General → Danger Zone →
-Change visibility → Make private. Then the branch can be pushed.
+Everything in this repository is written on the assumption that it is public.
+If that assumption ever stops holding, it should be re-reviewed rather than
+relaxed.
 
-While in Settings, Rule 6 also wants: branch protection on `main`, 2FA
-enforced, signed commits required, no GitHub Actions holding secrets, and no
-third-party GitHub Apps installed.
+**Still available at any time:** repository → Settings → General → Danger Zone
+→ Change visibility → Make private. Nothing in the build depends on the repo
+being public.
+
+Rule 6 also asks for: branch protection on `main`, 2FA enforced, signed commits
+required, no GitHub Actions holding secrets, and no third-party GitHub Apps
+installed. Those are unaffected by the visibility decision and still worth
+doing.
 
 **Naming.** Phase 0 proposed `thecompdesk-voice`. This build uses the existing
 `Voice-Agent` repository instead, because that is the repository the session is

@@ -40,11 +40,12 @@ this repository.
 | ⬜ | Model weights pinned (not just verified) | `python3 scripts/pin_weights.py ~/.desk/models`, paste into `config/weights.sha256`, **then check each digest against the publisher's published digest**. Desk refuses to boot until this is done. |
 | ⬜ | Survives sleep/wake and network loss, and says so rather than hanging | Sleep the Mac mid-session; pull the network mid-turn. Audit rows spool locally and replay (`Audit.flush_spool`), but the end-to-end behaviour is untested without the hardware. |
 
-## Blocked
+## Not met, by decision
 
-| | Line | Blocker |
+| | Line | Status |
 |---|---|---|
-| 🚫 | Private repo under `jmays2294-creator` | **`jmays2294-creator/Voice-Agent` is public.** See `docs/FINDINGS.md` item 1. Nothing has been pushed. Publishing a threat model to a public repository would be the first security failure of the project. |
+| ⚠️ | Private repo under `jmays2294-creator` | **`jmays2294-creator/Voice-Agent` is public.** The risk was put to Joel on 2026-09-14 and he chose to push to it anyway. Recorded in `docs/FINDINGS.md` item 1. No credential, host, project reference or account identifier is committed, and the build does not depend on the repo being public — flipping it to private later changes nothing except who can read the design. |
+| ⬜ | Branch protection on `main`, 2FA enforced, signed commits, no Actions holding secrets, no third-party Apps | Unaffected by the visibility decision, and still to do in repository Settings. |
 
 ## Deliberately not built
 
