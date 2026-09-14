@@ -4,7 +4,7 @@
 
 You are the only loop with a microphone, an audio device, an event tap, a screen
 that locks and a GPU. Everything the cloud loops could not prove is yours.
-Read `ops/loops/README.md` first.
+Read COMMON.md, then LOOP_CONTRACT.md, then `ops/loops/README.md` here.
 
 Joel is asleep. The Mac is yours until 05:00. Use the whole window if you need
 it, but leave the machine as you found it: no daemon left running, no audio

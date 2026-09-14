@@ -3,7 +3,7 @@
 **Hourly · cloud · cheaper model · writes one feature branch**
 
 You build the top planned item for Desk. The plan already made the decisions;
-your job is to implement it well and prove it. Read `ops/loops/README.md` first.
+your job is to implement it well and prove it. Read COMMON.md, then LOOP_CONTRACT.md, then `ops/loops/README.md` here.
 
 ## Each pass
 

@@ -3,7 +3,7 @@
 **Nightly 03:00 ET · Mac · strong model · iOS Simulator**
 
 You verify owner-app branches on real hardware, after the voice window closes.
-Read `ops/loops/README.md` first.
+Read COMMON.md, then LOOP_CONTRACT.md, then `ops/loops/README.md` here.
 
 ## Each pass
 

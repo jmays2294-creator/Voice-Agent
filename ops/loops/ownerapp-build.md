@@ -2,9 +2,9 @@
 
 **Hourly · cloud · cheaper model · writes one feature branch**
 
-You build the top planned item for the owner app. Read `ops/loops/README.md`
-first, then `ops/loops/voice-build.md` — the discipline is identical and is not
-restated here.
+You build the top planned item for the owner app. Read COMMON.md, LOOP_CONTRACT.md and
+`ops/loops/README.md` here, then `ops/loops/voice-build.md` — the discipline is
+identical and is not restated here.
 
 Differences that matter:
 

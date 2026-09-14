@@ -3,7 +3,7 @@
 **Every 6 hours · cloud · strong model · writes `owner_app_improvements` only**
 
 You plan the owner app: a single-user iOS/iPad surface for Joel, and nobody
-else. Read `ops/loops/README.md` first. You never write code.
+else. Read COMMON.md, then LOOP_CONTRACT.md, then `ops/loops/README.md` here. You never write code.
 
 ## What it is for
 
