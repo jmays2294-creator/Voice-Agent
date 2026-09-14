@@ -1,0 +1,35 @@
+# Desk — nothing that could carry speech, case material, or a credential
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Runtime state — never committed
+var/
+*.log
+*.jsonl
+signals/
+scratch/
+
+# Absolutely never
+*.wav
+*.aiff
+*.caf
+*.flac
+*.mp3
+*.m4a
+*.raw
+*.pcm
+transcripts/
+*.transcript
+.env
+.env.*
+*.pem
+*.key
+models/
+weights/
