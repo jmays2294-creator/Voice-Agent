@@ -67,10 +67,33 @@ class DarwinPushToTalk(BasePushToTalk):
     checked and reported rather than left to fail silently.
     """
 
+    #: Modifier keycodes and the flag each one sets. A modifier never produces
+    #: key-down/key-up, only a flags-changed event, so hold-to-talk on one of
+    #: these needs the matching mask.
+    MODIFIER_MASKS = {
+        63: "kCGEventFlagMaskSecondaryFn",   # fn / globe
+        54: "kCGEventFlagMaskCommand",       # right command
+        55: "kCGEventFlagMaskCommand",       # left command
+        58: "kCGEventFlagMaskAlternate",     # left option
+        61: "kCGEventFlagMaskAlternate",     # right option
+        56: "kCGEventFlagMaskShift",         # left shift
+        60: "kCGEventFlagMaskShift",         # right shift
+        59: "kCGEventFlagMaskControl",       # left control
+        62: "kCGEventFlagMaskControl",       # right control
+    }
+
     def __init__(self, keycode: int, on_press: Callback, on_release: Callback) -> None:
         super().__init__(keycode, on_press, on_release)
         self._tap = None
         self._loop = None
+
+    def _modifier_mask(self, Quartz):
+        name = self.MODIFIER_MASKS.get(self.keycode)
+        return getattr(Quartz, name) if name else None
+
+    @property
+    def is_modifier(self) -> bool:
+        return self.keycode in self.MODIFIER_MASKS
 
     def run(self) -> None:  # pragma: no cover - requires macOS + accessibility
         import Quartz
@@ -96,10 +119,15 @@ class DarwinPushToTalk(BasePushToTalk):
                     elif etype == Quartz.kCGEventKeyUp:
                         self._release()
                     elif etype == Quartz.kCGEventFlagsChanged:
-                        # Modifier keys (fn included) report state in the flags.
+                        # Modifier keys report state in the flags, and each one
+                        # has its own mask. This used to hardcode fn's, so
+                        # configuring any other modifier silently reported
+                        # "released" the instant it was pressed.
+                        mask = self._modifier_mask(Quartz)
+                        if mask is None:
+                            return event
                         flags = Quartz.CGEventGetFlags(event)
-                        down = bool(flags & Quartz.kCGEventFlagMaskSecondaryFn)
-                        self._press() if down else self._release()
+                        self._press() if flags & mask else self._release()
             except Exception:
                 pass
             return event

@@ -293,3 +293,25 @@ def test_the_auth_source_names_the_terms_question(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     assert "consumer" in _auth_source()
+
+
+def test_every_supported_hold_key_has_its_own_modifier_mask():
+    """The mask was hardcoded to fn's while the keycode was configurable, so
+    choosing any other modifier reported 'released' the instant it was pressed."""
+    from desk.ptt import DarwinPushToTalk
+
+    masks = DarwinPushToTalk.MODIFIER_MASKS
+    assert masks[63] == "kCGEventFlagMaskSecondaryFn"
+    assert masks[61] == "kCGEventFlagMaskAlternate", "right option is a sane alternative"
+    # Left and right of the same modifier share a flag; that is correct, because
+    # the keycode on the event says which physical key moved.
+    assert masks[54] == masks[55] and masks[58] == masks[61]
+    assert len(set(masks.values())) == 5
+
+
+def test_the_configured_key_is_one_the_tap_can_actually_watch():
+    from desk.config import load
+    from desk.ptt import DarwinPushToTalk
+
+    code = load().ptt_keycode
+    assert code in DarwinPushToTalk.MODIFIER_MASKS or 0 <= code <= 126, code
