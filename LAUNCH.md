@@ -66,21 +66,21 @@ cp ~/.cache/huggingface/hub/models--mlx-community--whisper-small.en-mlx/snapshot
 ```
 
 ```sh
-uv run python scripts/pin_weights.py ~/.desk/models
+uv run python scripts/pin_weights.py ~/.desk/models --write
 ```
 
-That prints exactly two lines, whose paths already match `config/weights.sha256`:
+Without `--write` it only prints the digests and changes nothing. With it, the
+two digests go straight into `config/weights.sha256` — hand-copying sixty-four
+hex characters twice is a transcription error waiting to happen, and the
+deliberation that matters is the next paragraph, not the typing.
 
-```
-<64 hex>  whisper-small.en/config.json
-<64 hex>  whisper-small.en/weights.npz
-```
+It replaces digests on lines the pin file already declares and never adds new
+ones: the pin file is the list of files Desk *requires*, and growing it from
+whatever happens to be on disk would let a stray file pin itself into the boot
+gate. A declared file that is missing aborts the write.
 
-Paste the two digests over the zeros in `config/weights.sha256`, keeping the
-paths as they are.
-
-**Then check each one against the publisher's published digest before
-committing.** Pinning what you downloaded without checking it pins the
+**Then check each digest against the publisher's published digest before you
+commit it.** Pinning what you downloaded without checking it pins the
 compromise exactly as readily as the original.
 
 > Point `pin_weights.py` at `~/.desk/models`, not at `~/.cache/huggingface`.
