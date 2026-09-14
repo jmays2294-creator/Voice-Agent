@@ -122,15 +122,34 @@ def test_a_matching_hash_passes(tmp_path):
     assert verify(tmp_path, pins={"w.npz": Pin(digest, "w.npz")}) == ["w.npz"]
 
 
-def test_the_committed_pin_file_is_still_placeholders(tmp_path):
-    """Fails the moment real digests land, which is the reminder to check them
-    against the publisher rather than just pasting what was downloaded."""
+def test_the_committed_pin_file_is_fully_pinned():
+    """Every declared weight carries a real digest.
+
+    This started life as the inverse — it asserted the pins were still
+    placeholders, so that filling them in would trip a reminder to check them
+    against the publisher. They have now been filled in, so it flips to the
+    durable form: a half-pinned file is the dangerous state, because Desk
+    refuses to boot on a placeholder but a malformed or missing line would
+    quietly narrow what gets verified.
+
+    Whether those digests match what the publisher published is a separate
+    question this test cannot answer, and it is tracked in ACCEPTANCE.md.
+    """
     pins = load_pins(Path(__file__).resolve().parents[1] / "config" / "weights.sha256")
     assert pins, "the pin file lost its entries"
-    assert all(p.sha256 == PLACEHOLDER for p in pins.values()), (
-        "real digests are pinned — confirm each against the publisher's published "
-        "digest, then delete this test"
-    )
+    for rel, pin in pins.items():
+        assert pin.sha256 != PLACEHOLDER, f"{rel} is still a placeholder"
+        assert len(pin.sha256) == 64, f"{rel} has a malformed digest"
+        assert all(c in "0123456789abcdef" for c in pin.sha256), f"{rel} is not hex"
+
+
+def test_every_file_the_loader_needs_is_pinned():
+    """mlx-whisper opens both of these, so both must be covered. A pin file
+    listing only the big one would verify the weights and leave the config —
+    which selects the architecture — unchecked."""
+    pins = load_pins(Path(__file__).resolve().parents[1] / "config" / "weights.sha256")
+    names = {rel.split("/")[-1] for rel in pins}
+    assert {"weights.npz", "config.json"} <= names, f"pinned: {sorted(names)}"
 
 
 def test_a_malformed_pin_line_is_an_error_not_a_skip(tmp_path):
