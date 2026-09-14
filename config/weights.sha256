@@ -14,5 +14,5 @@
 #
 # Format is sha256sum's: <digest>  <path relative to ~/.desk/models>
 
-0000000000000000000000000000000000000000000000000000000000000000  whisper-small.en/weights.npz
-0000000000000000000000000000000000000000000000000000000000000000  whisper-small.en/config.json
+40028e43687458e79ba89cc16bf14184c5414a5cbc00fd511f8f78d138647afd  whisper-small.en/config.json
+1bb29b030aca711a035f7a084a0eefac6251ecc2bdd356fa748858fbad082f5a  whisper-small.en/weights.npz
