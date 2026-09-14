@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 from .. import paths
-from .hook import _log, _queue_spoken, _read_web_grant, _extra_egress_hosts
+from .hook import _extra_egress_hosts, _log, _queue_spoken, _read_web_grant
 from .policy import Context, Decision, decide
 
 
@@ -37,7 +37,7 @@ async def pre_tool_use(input_data: dict, tool_use_id: str | None,
               "action": decision.action, "risk": decision.risk,
               "input": tool_input if isinstance(tool_input, dict) else None})
         _queue_spoken(decision, tool_name or "unknown")
-    except Exception as exc:  # noqa: BLE001 - fail closed, always
+    except Exception as exc:
         decision = Decision(False, "guard.internal_error",
                             "the guard could not evaluate that call, so I refused it.")
         _log({"at": time.time(), "decision": "deny", "rule": "guard.internal_error",

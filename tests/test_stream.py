@@ -7,8 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from desk.stream import (extract_text_delta, is_content_block_stop, is_ping,
-                         message_kind)
+from desk.stream import extract_text_delta, is_content_block_stop, is_ping, message_kind
 
 
 @pytest.mark.parametrize("message,expected", [

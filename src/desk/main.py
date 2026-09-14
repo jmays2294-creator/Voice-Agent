@@ -84,7 +84,7 @@ class Desk:
         started = time.perf_counter()
         try:
             capture = await asyncio.to_thread(self.ears.transcribe)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.exception("transcription failed")
             self.mouth.say_now("I couldn't make that out.")
             self.audit.denial("Transcribe", "stt.error", str(exc), spoken=True)
@@ -161,7 +161,7 @@ class Desk:
             await asyncio.to_thread(ptt.run)
         except (KeyboardInterrupt, asyncio.CancelledError):
             pass
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"
             log.exception("daemon loop failed")
         finally:
@@ -208,12 +208,12 @@ def verify_boot(cfg: Config) -> list[str]:
     problems: list[str] = []
     try:
         require_pinned_model(cfg.model)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         problems.append(str(exc))
     try:
         from .weights import verify
         verify(paths.state_dir() / "models")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         problems.append(str(exc))
     return problems
 
@@ -244,10 +244,8 @@ def cli(argv: list[str] | None = None) -> int:
         return 1
 
     desk, key = build(cfg)
-    try:
+    with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(desk.run(key))
-    except KeyboardInterrupt:
-        pass
     return 0
 
 

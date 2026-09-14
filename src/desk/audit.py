@@ -19,10 +19,24 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from . import paths
 from .guard.redact import redact, redact_obj
+
+
+def open_https(req, timeout: float):
+    """Open a request, refusing anything that is not HTTPS.
+
+    The URL is built from a configured host, so the scheme is fixed by
+    construction — but `urlopen` honours `file:` and custom schemes, and a
+    config value is one edit away from being somewhere it should not be. The
+    scheme is checked at the point of use rather than assumed.
+    """
+    url = req.full_url if hasattr(req, "full_url") else str(req)
+    if not url.startswith("https://"):
+        raise ValueError(f"refusing a non-HTTPS request: {url[:40]}")
+    return urllib.request.urlopen(req, timeout=timeout)  # noqa: S310 - scheme checked above
+
 
 AUDIT_TABLE = "voice_audit"
 RUNS_TABLE = "loop_runs"
@@ -43,7 +57,9 @@ def keychain_secret(service: str, account: str = "") -> str:
     if account:
         cmd += ["-a", account]
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
+        # Fixed argv, no shell, no interpolation of anything the model touched.
+        out = subprocess.run(cmd, capture_output=True, text=True,  # noqa: S603
+                             timeout=10, check=False)
     except (OSError, subprocess.SubprocessError) as exc:
         raise CredentialUnavailable(f"could not reach the keychain for {service}") from exc
     if out.returncode != 0:
@@ -91,7 +107,7 @@ class Audit:
             "Prefer": "return=representation",
         })
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            with open_https(req, self.timeout) as resp:
                 payload = json.loads(resp.read() or b"[]")
                 return payload[0] if isinstance(payload, list) and payload else None
         except (urllib.error.URLError, TimeoutError, ValueError, OSError):
@@ -108,7 +124,7 @@ class Audit:
                               separators=(",", ":"), default=str)
             with open(os.open(p, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a") as fh:
                 fh.write(line + "\n")
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     def flush_spool(self) -> int:

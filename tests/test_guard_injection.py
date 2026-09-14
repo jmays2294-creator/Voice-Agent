@@ -100,7 +100,7 @@ INDUCED_CALLS = [
 
 
 @pytest.mark.parametrize("tool_name,tool_input", INDUCED_CALLS,
-                         ids=[f"{t}:{list(i)[0]}" for t, i in INDUCED_CALLS])
+                         ids=[f"{t}:{next(iter(i))}" for t, i in INDUCED_CALLS])
 def test_injection_in_a_repo_file_cannot_reach_a_dangerous_verb(
         tool_name, tool_input, sandbox):
     """Source 1 — a poisoned file in a repo Desk is allowed to read."""
@@ -114,7 +114,7 @@ def test_injection_in_a_repo_file_cannot_reach_a_dangerous_verb(
 
 
 @pytest.mark.parametrize("tool_name,tool_input", INDUCED_CALLS,
-                         ids=[f"{t}:{list(i)[0]}" for t, i in INDUCED_CALLS])
+                         ids=[f"{t}:{next(iter(i))}" for t, i in INDUCED_CALLS])
 def test_injection_in_a_web_page_cannot_reach_a_dangerous_verb(
         tool_name, tool_input, sandbox):
     """Source 2 — a scraped page. The fetch itself is already refused without a
@@ -138,7 +138,7 @@ def test_injection_in_a_web_page_cannot_reach_a_dangerous_verb(
 
 
 @pytest.mark.parametrize("tool_name,tool_input", INDUCED_CALLS,
-                         ids=[f"{t}:{list(i)[0]}" for t, i in INDUCED_CALLS])
+                         ids=[f"{t}:{next(iter(i))}" for t, i in INDUCED_CALLS])
 def test_injection_in_a_supabase_row_cannot_reach_a_dangerous_verb(
         tool_name, tool_input, sandbox):
     """Source 3 — a row any app user can write. This is the nastiest of the

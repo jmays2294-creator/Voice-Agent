@@ -10,6 +10,7 @@ abandoned so `Brain.settle()` can drain it before the next question.
 
 from __future__ import annotations
 
+import contextlib
 import queue
 import threading
 import time
@@ -62,10 +63,10 @@ class Mouth:
     def prewarm(self) -> None:
         """Warm the voice and hold the output stream open, so the first real
         sentence of the day is not the slow one."""
-        try:
+        # An optimisation, not a gate: a voice that cannot warm up still
+        # speaks, just slower on the first sentence.
+        with contextlib.suppress(Exception):
             self.voice.prewarm()
-        except Exception:  # noqa: BLE001 - prewarm is an optimisation, not a gate
-            pass
 
     # --- the queue -------------------------------------------------------
 
@@ -105,10 +106,8 @@ class Mouth:
                     dropped += 1
             except queue.Empty:
                 break
-        try:
+        with contextlib.suppress(Exception):
             self.voice.stop()
-        except Exception:  # noqa: BLE001
-            pass
         self._speaking.clear()
         self.stats.dropped += dropped
         signals.set_state(signals.IDLE)
@@ -172,7 +171,7 @@ class Mouth:
                     self.stats.first_audio_ms = (time.perf_counter() - self._turn_started) * 1000
                 self.voice.speak(item)
                 self.stats.spoken += 1
-            except Exception:  # noqa: BLE001 - one bad utterance must not kill the mouth
+            except Exception:
                 pass
             finally:
                 self._speaking.clear()

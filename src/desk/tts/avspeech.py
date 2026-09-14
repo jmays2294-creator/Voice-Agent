@@ -26,7 +26,7 @@ class AVSpeechVoice:
     def _load(self):
         if self._synth is None:
             try:
-                from AVFoundation import (AVSpeechSynthesizer, AVSpeechSynthesisVoice)
+                from AVFoundation import AVSpeechSynthesisVoice, AVSpeechSynthesizer
             except ImportError as exc:  # pragma: no cover - platform specific
                 raise VoiceUnavailable(
                     "AVFoundation is unavailable. Install the [macos] extra; Desk "

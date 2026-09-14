@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from desk.weights import sha256_file  # noqa: E402
+from desk.weights import sha256_file
 
 SUFFIXES = {".npz", ".safetensors", ".bin", ".pt", ".gguf", ".json", ".model"}
 

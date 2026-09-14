@@ -12,7 +12,7 @@ that cannot tell whether the room is safe does not speak.
 from __future__ import annotations
 
 import platform
-from typing import Callable
+from collections.abc import Callable
 
 _probe: Callable[[], bool] | None = None
 
@@ -46,8 +46,10 @@ def _select() -> Callable[[], bool]:
 
 
 def set_probe(fn: Callable[[], bool] | None) -> None:
-    """Override the lock probe. Tests only."""
-    global _probe
+    """Override the lock probe. Tests and the health guard only — module state
+    is the right seam here because the probe must be swappable from outside the
+    process that reads it."""
+    global _probe  # noqa: PLW0603
     _probe = fn
 
 
@@ -55,7 +57,7 @@ def is_locked() -> bool:
     fn = _probe or _select()
     try:
         return bool(fn())
-    except Exception:  # noqa: BLE001 - cannot tell means locked
+    except Exception:
         return True
 
 

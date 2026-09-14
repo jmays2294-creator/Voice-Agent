@@ -11,8 +11,8 @@ can be loaded by the guard hook on the latency path.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 # Risk classes are spoken back to Joel before a confirmation is accepted.
 RISK_LOW = "low"
@@ -112,7 +112,9 @@ class Action:
             return f"action {self.name} needs {len(required_pos)} argument(s), got {len(pos)}"
         if len(pos) > len(self.positional):
             return f"action {self.name} takes at most {len(self.positional)} argument(s)"
-        for spec, value in zip(self.positional, pos):
+        # Lengths are bounds-checked above; trailing optional positionals may
+        # legitimately be absent, so this pairs what was actually supplied.
+        for spec, value in zip(self.positional, pos, strict=False):
             if not spec.check(value):
                 return f"argument {spec.name} is not a valid value"
 

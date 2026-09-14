@@ -22,9 +22,10 @@ Two traps this file exists to handle:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from typing import AsyncIterator, Callable
 
 from .sentences import SentenceAccumulator
 from .stream import extract_text_delta, is_content_block_stop, message_kind
@@ -122,10 +123,9 @@ class Brain:
 
     async def interrupt(self) -> None:
         if self._client is not None:
-            try:
+            # An interrupt that fails still gets drained below.
+            with contextlib.suppress(Exception):
                 await self._client.interrupt()
-            except Exception:  # noqa: BLE001 - an interrupt that fails still drains
-                pass
 
     async def drain(self, timeout: float = DRAIN_TIMEOUT) -> bool:
         """Consume an abandoned turn up to and including its ResultMessage.
@@ -141,9 +141,9 @@ class Brain:
                     if message_kind(message) == "ResultMessage":
                         self._turn_consumed = True
                         return True
-        except (TimeoutError, asyncio.TimeoutError):
+        except TimeoutError:
             return False
-        except Exception:  # noqa: BLE001 - a broken stream is a rebuild
+        except Exception:
             return False
         return False
 

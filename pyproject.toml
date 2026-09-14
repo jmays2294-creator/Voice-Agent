@@ -43,3 +43,36 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "SIM", "RUF", "TRY", "ISC", "PLW", "FURB"]
+ignore = [
+  # Deliberate throughout the guard, the mouth and the audit spool: logging is
+  # best effort and must never change an outcome. A denial that fails to log is
+  # still a denial; a mouth that fails on one utterance must not go silent.
+  # Each site carries its own comment saying so.
+  "S110",
+  # Bare `except Exception` is the fail-closed pattern. The guard exits 2 on
+  # anything it cannot evaluate, and the interlock reports "locked" when it
+  # cannot tell. Narrowing these would open the failure mode they exist to shut.
+  "BLE001",
+  # Assert is the point of a test suite.
+  "S101",
+  # The exception messages here ARE the user-facing explanation — "Refusing to
+  # boot", "Fill config/weights.sha256 with the digests printed by...". Moving
+  # them into exception classes would make the daemon less legible at the
+  # moment it refuses to start, which is the moment legibility matters most.
+  "TRY003",
+  # Ruff rewrites `frozenset("""a b c""".split())` into one very long list
+  # literal. The word-list form is the readable one for the abbreviation and
+  # label tables, which are edited by hand and read far more often than they
+  # are parsed.
+  "SIM905",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests drive a real subprocess and inspect the exit code themselves.
+# conftest inserts src/ on the path before importing the package under test;
+# S108 fires on a deliberate null-byte path *string* in a denial test.
+"tests/*" = ["S603", "S607", "PLW1510", "RUF059", "E402", "S108"]
+"scripts/*" = ["S603", "S607"]

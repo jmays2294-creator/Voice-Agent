@@ -28,7 +28,7 @@ _MAX_ABBREV_LEN = max(len(a) for a in _ABBREVIATIONS)
 
 #: A boundary candidate: terminal punctuation, optional closing quote/bracket,
 #: then whitespace.
-_BOUNDARY = re.compile(r'([.!?]+["\'”’)\]]?)(\s+)')
+_BOUNDARY = re.compile(r'([.!?]+["\'\u201d\u2019)\]]?)(\s+)')
 
 #: Trailing token immediately before the punctuation.
 _LAST_WORD = re.compile(r"([A-Za-z][A-Za-z.]*)$")
@@ -46,7 +46,7 @@ class type grade tier group batch queue column row step round version
 def _is_real_boundary(text: str, end: int) -> bool:
     """Is the terminal punctuation at `end` actually the end of a sentence?"""
     head = text[:end]
-    stripped = head.rstrip('."\'”’)]!?')
+    stripped = head.rstrip('."\'\u201d\u2019)]!?')
 
     # A numbered list marker: "1." at the start of a line. Only at the start —
     # "set for Sept. 3." ends a sentence, and treating every trailing digit as a

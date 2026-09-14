@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from desk import interlock, mouth as mouth_mod
+from desk import interlock
 from desk.mouth import STOP_BUDGET_MS, Mouth
 
 

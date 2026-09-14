@@ -12,6 +12,7 @@ egress channel during a turn that has just read untrusted text.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -50,10 +51,8 @@ def issue(hosts: frozenset[str], seconds: int = 90) -> None:
 
 def revoke() -> None:
     """Called at the end of every turn, unconditionally."""
-    try:
+    with contextlib.suppress(OSError):
         paths.web_grant_file().unlink(missing_ok=True)
-    except OSError:
-        pass
 
 
 def active() -> bool:

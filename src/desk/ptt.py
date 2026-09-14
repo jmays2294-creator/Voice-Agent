@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import platform
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 Callback = Callable[[], None]
 
@@ -74,8 +74,13 @@ class DarwinPushToTalk(BasePushToTalk):
 
     def run(self) -> None:  # pragma: no cover - requires macOS + accessibility
         import Quartz
-        from CoreFoundation import (CFMachPortCreateRunLoopSource, CFRunLoopAddSource,
-                                    CFRunLoopGetCurrent, CFRunLoopRun, kCFRunLoopCommonModes)
+        from CoreFoundation import (
+            CFMachPortCreateRunLoopSource,
+            CFRunLoopAddSource,
+            CFRunLoopGetCurrent,
+            CFRunLoopRun,
+            kCFRunLoopCommonModes,
+        )
 
         mask = (Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown)
                 | Quartz.CGEventMaskBit(Quartz.kCGEventKeyUp)
@@ -95,7 +100,7 @@ class DarwinPushToTalk(BasePushToTalk):
                         flags = Quartz.CGEventGetFlags(event)
                         down = bool(flags & Quartz.kCGEventFlagMaskSecondaryFn)
                         self._press() if down else self._release()
-            except Exception:  # noqa: BLE001 - never let the tap die on one event
+            except Exception:
                 pass
             return event
 

@@ -3,7 +3,6 @@
 These are the machine-enforced limits. If one of these goes red the daemon must
 not run: everything downstream assumes the guard holds.
 """
-from pathlib import Path
 
 import pytest
 

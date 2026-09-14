@@ -45,7 +45,8 @@ Nothing else. In particular:
 - **No cloud TTS behind a flag "for later".** An unused code path to a third
   party is still an audit finding, and still gets switched on by someone in a
   hurry. There is no such path in this repository, and
-  `tests/test_no_third_party_voice.py` fails the build if one appears.
+  `test_no_cloud_voice_service_anywhere_in_the_tree` fails the build if one
+  appears.
 - **No telemetry, crash reporting, or analytics.**
 
 ## What crosses the network, and what never does
@@ -58,8 +59,9 @@ Nothing else. In particular:
 | Case material Joel dictates | Only in the model exchange, and only after the Rule 4.5 room confirmation. Default for privileged material is written to screen, headline only aloud. |
 | Audit and denial records | To Joel's own Supabase instance, redacted first. |
 
-`tests/test_no_speech_egress.py` asserts this structurally: no module that
-touches audio or transcripts imports a network client.
+`test_no_module_that_touches_speech_can_reach_the_network` asserts this
+structurally, at the level of the import graph: no module that touches audio or
+transcript text can import a network client.
 
 ## Attack surfaces, and what stops each
 

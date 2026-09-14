@@ -25,9 +25,9 @@ from pathlib import Path
 if __package__ in (None, ""):  # direct invocation as a script
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from desk import paths  # noqa: E402
-from desk.guard.policy import Context, Decision, decide  # noqa: E402
-from desk.guard.redact import redact_obj  # noqa: E402
+from desk import paths
+from desk.guard.policy import Context, Decision, decide
+from desk.guard.redact import redact_obj
 
 _EXIT_ALLOW = 0
 _EXIT_DENY = 2  # the only exit code that reliably blocks
@@ -56,7 +56,7 @@ def _log(record: dict) -> None:
         p = paths.decision_log()
         with open(os.open(p, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a") as fh:
             fh.write(line + "\n")
-    except Exception:  # noqa: BLE001 - logging is best effort, denial is not
+    except Exception:
         pass
 
 
@@ -71,7 +71,7 @@ def _queue_spoken(decision: Decision, tool_name: str) -> None:
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(os.open(p, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600), "a") as fh:
             fh.write(json.dumps(redact_obj(rec), separators=(",", ":")) + "\n")
-    except Exception:  # noqa: BLE001
+    except Exception:
         pass
 
 
@@ -90,8 +90,8 @@ def _read_web_grant() -> tuple[frozenset[str], float]:
             return frozenset(), 0.0
         clean = frozenset(h.lower() for h in hosts if isinstance(h, str) and h)
         expires = float(data.get("expires") or 0.0)
-        return clean, expires
-    except Exception:  # noqa: BLE001 - no grant on any doubt
+        return clean, expires  # noqa: TRY300
+    except Exception:
         return frozenset(), 0.0
 
 
@@ -140,9 +140,9 @@ def main(argv: list[str] | None = None) -> int:
         raw = sys.stdin.read()
         payload = json.loads(raw) if raw.strip() else {}
         if not isinstance(payload, dict):
-            raise ValueError("hook payload was not an object")
+            raise TypeError("hook payload was not an object")  # noqa: TRY301
         decision, record = run(payload)
-    except Exception as exc:  # noqa: BLE001 - fail closed, always
+    except Exception as exc:
         fallback = Decision(
             False, "guard.internal_error",
             "the guard could not evaluate that call, so I refused it.",

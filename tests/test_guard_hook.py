@@ -16,7 +16,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 HOOK = REPO / "src" / "desk" / "guard" / "hook.py"
 
-from desk.guard import hook as hookmod  # noqa: E402
+from desk.guard import hook as hookmod
 
 
 def run_raw(stdin_text, sandbox):
@@ -35,7 +35,8 @@ def run_raw(stdin_text, sandbox):
 ])
 def test_malformed_input_fails_closed(stdin_text, sandbox):
     proc = run_raw(stdin_text, sandbox)
-    assert proc.returncode == 2, f"exit {proc.returncode} for {stdin_text!r} — that lets the call through"
+    assert proc.returncode == 2, (
+        f"exit {proc.returncode} for {stdin_text!r} — that lets the call through")
     body = json.loads(proc.stdout)
     assert body["hookSpecificOutput"]["permissionDecision"] == "deny"
 

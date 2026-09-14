@@ -8,8 +8,6 @@ import re
 import subprocess
 from pathlib import Path
 
-import pytest
-
 REPO = Path(__file__).resolve().parents[1]
 
 
@@ -224,8 +222,9 @@ def test_zero_secret_values():
 
 
 def test_the_daemon_never_reads_the_secrets_directory():
-    from desk.guard.policy import is_secret_path
     from pathlib import PurePath
+
+    from desk.guard.policy import is_secret_path
     assert is_secret_path(PurePath("/x/TheCompDesk-Secrets/supabase.txt"))
 
 

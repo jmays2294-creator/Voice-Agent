@@ -8,7 +8,6 @@ import pytest
 from desk import grant, interlock, paths
 from desk.weights import PLACEHOLDER, WeightsError, load_pins, sha256_file, verify
 
-
 # --- interlock ------------------------------------------------------------
 
 def test_a_daemon_that_cannot_tell_treats_the_screen_as_locked():

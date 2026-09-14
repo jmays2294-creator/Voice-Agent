@@ -13,7 +13,6 @@ changed.
 
 from __future__ import annotations
 
-import argparse
 import json
 import sys
 from pathlib import Path
@@ -21,9 +20,9 @@ from pathlib import Path
 if __package__ in (None, ""):  # pragma: no cover
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from desk import config as cfg_mod  # noqa: E402
-from desk.audit import Audit  # noqa: E402
-from desk.guard.actions import ACTIONS  # noqa: E402
+from desk import config as cfg_mod
+from desk.audit import Audit
+from desk.guard.actions import ACTIONS
 
 EXIT_OK = 0
 EXIT_REFUSED = 3
@@ -33,23 +32,23 @@ EXIT_ERROR = 4
 #: A table not named here cannot be reached from a voice turn at all — there is
 #: no general query path. See VOICE_SURFACE.md.
 _READ_QUERIES = {
-    "loop.status": ("loop_runs", "select=id,loop,status,started_at,finished_at,notes"
-                                 "&order=started_at.desc&limit=40"),
-    "loop.failures": ("loop_runs", "select=id,loop,status,started_at,finished_at,notes"
-                                   "&status=neq.passed&order=started_at.desc&limit=40"),
-    "lane.status": ("lane_claims", "select=id,lane,claimed_at,released_at,files"
-                                   "&order=claimed_at.desc&limit=20"),
-    "lane.why": ("loop_runs", "select=id,loop,status,notes,finished_at"
-                              "&order=started_at.desc&limit=20"),
-    "sweep.status": ("app_e2e_runs", "select=id,kind,status,started_at,report_path"
-                                     "&order=started_at.desc&limit=10"),
-    "queue.list": ("app_improvements", "select=id,title,status,est_hours,risk_class"
-                                       "&status=eq.planned&order=id.desc&limit=25"),
+    "loop.status": ("loop_runs", ("select=id,loop,status,started_at,finished_at,notes"
+                                  "&order=started_at.desc&limit=40")),
+    "loop.failures": ("loop_runs", ("select=id,loop,status,started_at,finished_at,notes"
+                                    "&status=neq.passed&order=started_at.desc&limit=40")),
+    "lane.status": ("lane_claims", ("select=id,lane,claimed_at,released_at,files"
+                                    "&order=claimed_at.desc&limit=20")),
+    "lane.why": ("loop_runs", ("select=id,loop,status,notes,finished_at"
+                               "&order=started_at.desc&limit=20")),
+    "sweep.status": ("app_e2e_runs", ("select=id,kind,status,started_at,report_path"
+                                      "&order=started_at.desc&limit=10")),
+    "queue.list": ("app_improvements", ("select=id,title,status,est_hours,risk_class"
+                                        "&status=eq.planned&order=id.desc&limit=25")),
     "queue.show": ("app_improvements", "select=*"),
-    "owner.requests": ("owner_requests", "select=id,request,status,created_at"
-                                         "&order=created_at.desc&limit=20"),
-    "audit.recent": ("voice_audit", "select=at,action,risk,decision,outcome"
-                                    "&order=at.desc&limit=30"),
+    "owner.requests": ("owner_requests", ("select=id,request,status,created_at"
+                                          "&order=created_at.desc&limit=20")),
+    "audit.recent": ("voice_audit", ("select=at,action,risk,decision,outcome"
+                                     "&order=at.desc&limit=30")),
 }
 
 
@@ -84,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
             result = _execute_write(name, action, parsed, audit)
         else:
             result = _execute_read(name, parsed, audit)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         audit.action(name, action.risk, " ".join(args), args, outcome=f"error: {exc}")
         return _fail(f"{name} failed: {exc}", EXIT_ERROR)
 
@@ -172,6 +171,8 @@ def _select(audit: Audit, table: str, query: str) -> list[dict]:
     import urllib.error
     import urllib.request
 
+    from desk.audit import open_https
+
     if not audit.host:
         return []
     url = f"https://{audit.host}/rest/v1/{table}?{query}"
@@ -179,7 +180,7 @@ def _select(audit: Audit, table: str, query: str) -> list[dict]:
     req = urllib.request.Request(url, headers={
         "apikey": token, "Authorization": f"Bearer {token}"})
     try:
-        with urllib.request.urlopen(req, timeout=audit.timeout) as resp:
+        with open_https(req, audit.timeout) as resp:
             data = json.loads(resp.read() or b"[]")
             return data if isinstance(data, list) else []
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:

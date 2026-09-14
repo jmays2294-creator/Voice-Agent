@@ -31,8 +31,9 @@ audit in one sitting.
 
 **`webrtcvad` is a trimmer, never a trigger.** It runs only on audio already
 captured while the key was held. There is no code path in which VAD opens the
-microphone — Rule 4 forbids it, and `tests/test_no_always_listening.py`
-asserts it.
+microphone — Rule 4 forbids it, and
+`test_vad_is_a_trimmer_and_never_a_trigger` asserts it against the call graph
+rather than the prose.
 
 ## Deliberate exclusions
 

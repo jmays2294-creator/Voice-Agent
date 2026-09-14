@@ -20,12 +20,12 @@ import json
 import statistics
 import sys
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from desk.config import load  # noqa: E402
+from desk.config import load
 
 TURNS = [
     "What happened overnight?",
@@ -61,7 +61,7 @@ class Stage:
         if not self.samples:
             return 0.0
         ordered = sorted(self.samples)
-        idx = min(len(ordered) - 1, int(round(q * (len(ordered) - 1))))
+        idx = min(len(ordered) - 1, round(q * (len(ordered) - 1)))
         return ordered[idx]
 
     def row(self) -> dict:
@@ -87,7 +87,8 @@ async def run_synthetic(cfg) -> dict:
         "device": Stage("Device open (prewarmed)", lat.device_open_ms),
     }
     total = Stage("Key release to first audible syllable", cfg.latency.p50_ms)
-    rng = random.Random(20260914)
+    # Seeded so a synthetic run is reproducible. Not a security primitive.
+    rng = random.Random(20260914)  # noqa: S311
     for _ in TURNS:
         turn = 0.0
         for key, stage in stages.items():
@@ -102,7 +103,7 @@ async def run_synthetic(cfg) -> dict:
 
 async def run_live(cfg) -> dict:
     """The real thing, on the Mac."""
-    from desk import paths, session, signals
+    from desk import paths, session
     from desk.brain import Brain
     from desk.mouth import Mouth
     from desk.stt import create as create_stt
@@ -166,11 +167,14 @@ async def run_live(cfg) -> dict:
 def render(result: dict, cfg) -> str:
     live = result["mode"] == "live"
     total = result["total"]
+    # An em dash rather than a verdict: a synthetic run makes no latency claim.
+    verdict = "—" if not live else (
+        "PASS" if total["p50_ms"] <= cfg.latency.p50_ms else "FAIL")
     lines = [
         "# Desk — Latency",
         "",
-        f"Mode: **{result['mode']}** · turns: {total['n']} · "
-        f"generated {time.strftime('%Y-%m-%d')}",
+        (f"Mode: **{result['mode']}** · turns: {total['n']} · "
+         f"generated {time.strftime('%Y-%m-%d')}"),
         "",
     ]
     if not live:
@@ -184,13 +188,13 @@ def render(result: dict, cfg) -> str:
     lines += [
         "## Contract",
         "",
-        f"Key release to first audible syllable: p50 ≤ {cfg.latency.p50_ms}ms, "
-        f"p95 ≤ {cfg.latency.p95_ms}ms.",
+        (f"Key release to first audible syllable: p50 ≤ {cfg.latency.p50_ms}ms, "
+         f"p95 ≤ {cfg.latency.p95_ms}ms."),
         "",
-        f"| | p50 | p95 | budget | |",
+        "| | p50 | p95 | budget | |",
         "|---|---|---|---|---|",
-        f"| **{total['stage']}** | {total['p50_ms']}ms | {total['p95_ms']}ms | "
-        f"{cfg.latency.p50_ms}ms | {'PASS' if live and total['p50_ms'] <= cfg.latency.p50_ms else ('—' if not live else 'FAIL')} |",
+        (f"| **{total['stage']}** | {total['p50_ms']}ms | {total['p95_ms']}ms | "
+         f"{cfg.latency.p50_ms}ms | {verdict} |"),
         "",
         "## Per stage",
         "",
@@ -224,10 +228,7 @@ def main() -> int:
     args = ap.parse_args()
 
     cfg = load()
-    if args.live:
-        result = asyncio.run(run_live(cfg))
-    else:
-        result = asyncio.run(run_synthetic(cfg))
+    result = asyncio.run(run_live(cfg) if args.live else run_synthetic(cfg))
 
     if args.json:
         print(json.dumps(result, indent=2))

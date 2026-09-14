@@ -25,9 +25,9 @@ import os
 import re
 import shlex
 import time
-from urllib.parse import urlsplit
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
+from urllib.parse import urlsplit
 
 from .actions import ACTION_BINARY, ACTIONS
 
@@ -178,16 +178,16 @@ def is_secret_path(path: PurePath) -> bool:
         return True
     if base.endswith(_SECRET_SUFFIXES):
         return True
-    if any(base.startswith(p) for p in _SECRET_PREFIXES):
-        return True
-    return False
+    return any(base.startswith(p) for p in _SECRET_PREFIXES)
 
 
 def _readable(path: Path, ctx: Context) -> Decision:
     if is_secret_path(path):
-        return _deny("read.secret", "that path holds credentials, and Desk never reads those.")
+        return _deny("read.secret",
+                     "that path holds credentials, and Desk never reads those.")
     if not any(_within(path, r) for r in ctx.workspace_roots):
-        return _deny("read.outside_workspace", "that is outside the workspace I am allowed to read.")
+        return _deny("read.outside_workspace",
+                     "that is outside the workspace I am allowed to read.")
     return _allow("read.ok")
 
 
@@ -216,11 +216,13 @@ def _decide_write(tool: str, ti: dict, ctx: Context, cwd: Path) -> Decision:
     if path is None:
         return _deny("write.bad_path", "that write did not name a usable path.")
     if is_secret_path(path):
-        return _deny("write.secret", "that path holds credentials, and Desk never writes there.")
+        return _deny("write.secret",
+                     "that path holds credentials, and Desk never writes there.")
     if not _within(path, ctx.scratch_dir):
         return _deny(
             "write.outside_scratch",
-            "I can only write inside the scratch folder. Everything else goes through a named action.",
+            "I can only write inside the scratch folder. Everything else goes "
+            "through a named action.",
         )
     return _allow("write.scratch")
 
@@ -230,7 +232,8 @@ def _decide_bash(ti: dict, ctx: Context) -> Decision:
     if not isinstance(cmd, str) or not cmd.strip():
         return _deny("bash.empty", "that was an empty command.")
     if ti.get("run_in_background"):
-        return _deny("bash.background", "background commands are not available to the voice session.")
+        return _deny("bash.background",
+                     "background commands are not available to the voice session.")
     if _SHELL_META.search(cmd):
         return _deny(
             "bash.metacharacter",
@@ -247,7 +250,7 @@ def _decide_bash(ti: dict, ctx: Context) -> Decision:
     hit = lowered & _FORBIDDEN_TOKENS
     if hit:
         return _deny("bash.forbidden_verb",
-                     f"{sorted(hit)[0]} is not something the voice session may run.")
+                     f"{min(hit)} is not something the voice session may run.")
     if lowered & _FORBIDDEN_REFS:
         return _deny("bash.protected_ref", "nothing from a voice turn is allowed to touch main.")
 

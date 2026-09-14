@@ -28,7 +28,8 @@ _RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("[wcb]", re.compile(r"(?i)\bWCB\s*(?:case\s*)?(?:#|no\.?|number)?\s*[:\-]?\s*"
                          r"[A-Z]?\d{6,9}\b")),
     ("[wcb]", re.compile(r"\b[A-Z]\d{7,8}\b")),
-    ("[carriercase]", re.compile(r"(?i)\bcarrier\s+case\s*(?:#|no\.?)?\s*[:\-]?\s*[A-Z0-9-]{5,}\b")),
+    ("[carriercase]", re.compile(r"(?i)\bcarrier\s+case\s*(?:#|no\.?)?"
+                                 r"\s*[:\-]?\s*[A-Z0-9-]{5,}\b")),
     ("[ssn]", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     ("[dob]", re.compile(r"(?i)\b(?:d\.?o\.?b\.?|date of birth)\s*[:\-]?\s*"
                          r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b")),

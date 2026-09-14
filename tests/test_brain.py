@@ -4,12 +4,11 @@ Barge-in is a headline feature, so the abandoned-turn path is hit on day one.
 An answer that arrives one turn late is not a crash — it is a daemon that
 confidently answers the previous question for the rest of the session.
 """
-import asyncio
 
 import pytest
+from fake_sdk import FakeClient
 
 from desk.brain import Brain, ModelPinError, require_pinned_model
-from fake_sdk import FakeClient, ResultMessage
 
 
 def make_brain(**kw):

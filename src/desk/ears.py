@@ -10,6 +10,7 @@ ends up at rest on a machine holding privileged material.
 
 from __future__ import annotations
 
+import contextlib
 import threading
 import time
 from dataclasses import dataclass
@@ -109,10 +110,8 @@ class Ears:
 
         audio = np.concatenate(frames, axis=0).reshape(-1).astype("float32")
         for f in frames:
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 f[:] = 0
-            except (TypeError, ValueError):
-                pass
         frames.clear()
 
         try:
@@ -133,7 +132,8 @@ def trim_silence(audio, sample_rate: int, frame_ms: int = 30,
 
     VAD is a *trimmer* here and never a trigger. It only ever sees audio the
     held key already authorised; no code path lets it open the microphone.
-    Rule 4 forbids one, and `tests/test_no_always_listening.py` asserts it.
+    Rule 4 forbids one, and `test_vad_is_a_trimmer_and_never_a_trigger`
+    asserts it at the level of the call graph.
     """
     import numpy as np
 
@@ -157,7 +157,7 @@ def trim_silence(audio, sample_rate: int, frame_ms: int = 30,
         chunk = pcm16[i * frame_len:(i + 1) * frame_len].tobytes()
         try:
             voiced.append(vad.is_speech(chunk, sample_rate))
-        except Exception:  # noqa: BLE001 - an unsupported rate means no trim
+        except Exception:
             return audio
     if not any(voiced):
         return audio[:0]

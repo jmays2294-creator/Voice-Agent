@@ -7,7 +7,7 @@ import pytest
 SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(SRC))
 
-from desk.guard.policy import Context  # noqa: E402
+from desk.guard.policy import Context
 
 
 @pytest.fixture
