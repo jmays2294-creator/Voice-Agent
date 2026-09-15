@@ -23,7 +23,11 @@ your job is to implement it well and prove it. Read COMMON.md, then LOOP_CONTRAC
    `gate_a_detail`.
 6. Green → commit, push the branch, `status='implemented'`, fill
    `change_summary` / `change_reason` / `change_impact` in plain English. Joel
-   reads those, not the diff.
+   reads those, not the diff. If `bounce_count > 0` — you are re-implementing
+   an item Gate B already bounced — reset `gate_b='pending'` and null
+   `gate_b_at`, `gate_b_agent` and `gate_b_detail` in the same update that
+   sets `status='implemented'`. One update, so there is no window where the
+   row says reviewed-and-failed about a commit that no longer exists.
 7. Red and you cannot fix it inside the item's scope → **delete the branch**,
    set `status='planned'`, and write in `implementation_note` exactly what
    blocked you. Then close the row `partial`. Pushing red and hoping is the one

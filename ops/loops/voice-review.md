@@ -12,8 +12,12 @@ passes everything is not a gate.
 ## Each pass
 
 1. Kill switch. Run row (`loop='cd-voice-review'`, `dept='voice'`).
-2. Take every `voice_improvements` row with `status='implemented'` and
-   `gate_b='pending'`. None → `noop`.
+2. Take every `voice_improvements` row that is implemented and awaiting
+   review: `status='implemented' AND (gate_b='pending' OR gate_b_at IS NULL
+   OR gate_b_at < implemented_at)`. Not a literal `gate_b='pending'` — the
+   20:04 miss was a row whose gate_b still read `'fail'` from a bounced
+   commit that no longer existed; a verdict older than the commit it is
+   attached to is not a verdict on that commit. None → `noop`.
 3. For each, read the branch diff — **the diff, not the summary**. The summary
    is what the builder believed it did.
 
