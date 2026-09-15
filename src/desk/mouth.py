@@ -32,8 +32,9 @@ class MouthStats:
 
 
 class Mouth:
-    def __init__(self, voice, check_interlock: bool = True) -> None:
+    def __init__(self, voice, screen=None, check_interlock: bool = True) -> None:
         self.voice = voice
+        self.screen = screen
         self.check_interlock = check_interlock
         self._q: queue.Queue = queue.Queue()
         self._thread: threading.Thread | None = None
@@ -141,16 +142,15 @@ class Mouth:
     def case_material_guard(self, headline: str) -> str | None:
         """What to speak when case material is involved.
 
-        Default for privileged material is quiet: the headline aloud, the detail
-        on screen. Returns the sentence to speak, or None if the room has not
-        been confirmed yet this session.
+        Default for privileged material is quiet: the headline goes to the
+        screen, never into what gets spoken, until the room is confirmed this
+        session. Returns the sentence to speak, or None once it has been.
         """
         if self._room_confirmed:
             return None
-        return (
-            "Before I read anything case-specific out loud — can you be overheard "
-            f"where you are? {headline}"
-        )
+        if self.screen is not None:
+            self.screen.write(headline)
+        return "Before I read anything case-specific out loud — can you be overheard where you are?"
 
     # --- worker ----------------------------------------------------------
 

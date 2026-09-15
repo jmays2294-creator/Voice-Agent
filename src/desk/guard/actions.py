@@ -193,6 +193,12 @@ _ALL: tuple[Action, ...] = (
     Action("reminder.add", RISK_LOW, True,
            "Add an owner reminder.",
            flags={"text": Param("text", _text, required=False), "payload": _PAYLOAD}),
+    # `writes` is false: this prints to stdout and returns, no database row, no
+    # confirmation. It exists so Rule 4.5 has somewhere to put the detail that
+    # never gets spoken.
+    Action("screen.write", RISK_LOW, False,
+           "Write detail to the screen. Nothing is spoken and nothing is stored.",
+           flags={"text": Param("text", _text)}),
 )
 
 ACTIONS: dict[str, Action] = {a.name: a for a in _ALL}

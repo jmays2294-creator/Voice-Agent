@@ -1,10 +1,12 @@
 """The mouth: barge-in, the interlock, and the room gate."""
+import io
 import time
 
 import pytest
 
 from desk import interlock
 from desk.mouth import STOP_BUDGET_MS, Mouth
+from desk.screen import Screen
 
 
 class FakeVoice:
@@ -133,6 +135,38 @@ def test_the_room_is_confirmed_once_per_session(mouth):
     assert mouth.case_material_guard("anything") is None
     mouth.reset_room()
     assert mouth.case_material_guard("anything") is not None
+
+
+def test_the_headline_is_never_embedded_in_the_spoken_ask(mouth):
+    """Rule 4.5: nothing case-specific is spoken before the room is confirmed
+    — not even folded into the same sentence as the question."""
+    prompt = mouth.case_material_guard("Jane Roe, WCB G1234567")
+    assert "Jane Roe" not in prompt
+    assert "G1234567" not in prompt
+
+
+def test_the_headline_goes_to_the_screen_instead_of_being_dropped(voice, sandbox):
+    out = io.StringIO()
+    m = Mouth(voice, screen=Screen(out), check_interlock=False)
+    m.start()
+    try:
+        prompt = m.case_material_guard("Jane Roe, WCB G1234567")
+        assert prompt is not None
+        assert "Jane Roe, WCB G1234567" in out.getvalue()
+    finally:
+        m.stop_worker()
+
+
+def test_a_confirmed_room_writes_nothing_new_to_the_screen(voice, sandbox):
+    out = io.StringIO()
+    m = Mouth(voice, screen=Screen(out), check_interlock=False)
+    m.start()
+    try:
+        m.confirm_room()
+        assert m.case_material_guard("anything") is None
+        assert out.getvalue() == ""
+    finally:
+        m.stop_worker()
 
 
 def test_prewarm_warms_the_voice(mouth, voice):

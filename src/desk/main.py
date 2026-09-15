@@ -42,12 +42,13 @@ class TurnTiming:
 
 class Desk:
     def __init__(self, cfg: Config, brain: Brain, ears: Ears, mouth,
-                 audit: audit_mod.Audit) -> None:
+                 audit: audit_mod.Audit, screen=None) -> None:
         self.cfg = cfg
         self.brain = brain
         self.ears = ears
         self.mouth = mouth
         self.audit = audit
+        self.screen = screen
         self.turns = 0
         self.timings: list[TurnTiming] = []
         self._turn_task: asyncio.Task | None = None
@@ -60,6 +61,7 @@ class Desk:
         if interlock.is_locked():
             # Locked screen: deaf and mute. No queueing, no resume on unlock.
             signals.set_state(signals.DEAF)
+            self._screen_status(signals.DEAF)
             return
         if self.mouth.speaking or self._turn_task is not None:
             # Barge-in. Cut the utterance, abandon the turn; settle() drains it
@@ -68,6 +70,7 @@ class Desk:
             self._cancel_turn()
         self.ears.open()
         signals.set_state(signals.LISTENING)
+        self._screen_status(signals.LISTENING)
 
     def on_release(self) -> None:
         """Key up. Close the device before anything else happens."""
@@ -75,6 +78,7 @@ class Desk:
             return
         self.ears.close()
         signals.set_state(signals.THINKING)
+        self._screen_status(signals.THINKING)
         if self._loop is not None:
             asyncio.run_coroutine_threadsafe(self._handle_turn(), self._loop)
 
@@ -82,6 +86,11 @@ class Desk:
         task, self._turn_task = self._turn_task, None
         if task is not None and not task.done():
             task.cancel()
+
+    def _screen_status(self, state: str, heard: str = "", said: str = "") -> None:
+        """A no-op when there is no screen — the --verbose surface only."""
+        if self.screen is not None:
+            self.screen.status(state, heard=heard, said=said)
 
     # --- the turn --------------------------------------------------------
 
@@ -115,7 +124,9 @@ class Desk:
         text = capture.text.strip()
         if not text:
             signals.set_state(signals.IDLE)
+            self._screen_status(signals.IDLE)
             return
+        self._screen_status(signals.THINKING, heard=text)
 
         hosts = grant.detect(text, self.cfg.egress_hosts)
         if hosts:
@@ -136,6 +147,7 @@ class Desk:
             self._turn_task = None
             await self._speak_denials()
             signals.set_state(signals.IDLE)
+            self._screen_status(signals.IDLE)
             timing.total_ms = (time.perf_counter() - started) * 1000
             stats = self.brain.last
             if stats is not None:
@@ -154,6 +166,7 @@ class Desk:
     async def _speak_answer(self, text: str, timing: TurnTiming) -> None:
         async for sentence in self.brain.ask(text):
             self.mouth.say(sentence)
+            self._screen_status(signals.SPEAKING, said=sentence)
             if not timing.first_sentence_ms:
                 stats = self.brain.last
                 timing.first_token_ms = stats.first_token_ms or 0.0
@@ -274,24 +287,28 @@ def _auth_source() -> str:
     return "claude.ai login (check the plan — consumer terms differ on training)"
 
 
-def build(cfg: Config) -> tuple[Desk, object]:
+def build(cfg: Config, verbose: bool = False) -> tuple[Desk, object]:
     from . import ptt as ptt_mod
     from . import session
     from .mouth import Mouth
+    from .screen import Screen
     from .stt import create as create_stt
     from .tts import create as create_tts
 
     require_pinned_model(cfg.model)
     paths.ensure_dirs()
 
+    # The screen surface only exists for --verbose: it is a terminal you are
+    # watching, not a default-on channel for a headless run.
+    screen = Screen() if verbose else None
     transcriber = create_stt(cfg.stt_backend, cfg.stt_model)
     voice = create_tts(cfg.tts_backend, cfg.tts_voice, cfg.tts_rate)
     ears = Ears(transcriber, cfg.sample_rate)
-    mouth = Mouth(voice)
+    mouth = Mouth(voice, screen=screen)
     brain = Brain(lambda: session.build_options(cfg))
     audit = audit_mod.Audit(host=cfg.supabase_host, service=cfg.keychain_service)
 
-    desk = Desk(cfg, brain, ears, mouth, audit)
+    desk = Desk(cfg, brain, ears, mouth, audit, screen=screen)
     key = ptt_mod.create(cfg.ptt_keycode, desk.on_press, desk.on_release)
     return desk, key
 
@@ -347,7 +364,7 @@ def cli(argv: list[str] | None = None) -> int:
             print(f"refusing to start: {p}", file=sys.stderr)
         return 1
 
-    desk, key = build(cfg)
+    desk, key = build(cfg, verbose=args.verbose)
     with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(desk.run(key))
     return 0

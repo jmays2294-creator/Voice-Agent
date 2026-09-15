@@ -205,6 +205,16 @@ def test_write_action_with_confirmation_allowed_and_carries_risk(ctx):
     assert dec.allow is True and dec.risk == "high" and dec.action == "queue.approve"
 
 
+def test_screen_write_is_allowed_low_risk_and_needs_no_confirmation(ctx):
+    dec = d("Bash", {"command": "desk-action screen.write --text 'hello'"}, ctx)
+    assert dec.allow is True and dec.risk == "low" and dec.action == "screen.write"
+
+
+def test_screen_write_without_text_denied(ctx):
+    dec = d("Bash", {"command": "desk-action screen.write"}, ctx)
+    assert dec.allow is False and dec.rule == "action.bad_arguments"
+
+
 def test_unknown_action_denied(ctx):
     dec = d("Bash", {"command": "desk-action repo.push --confirm yes"}, ctx)
     assert dec.allow is False and dec.rule == "action.unknown"

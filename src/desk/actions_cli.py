@@ -118,6 +118,16 @@ def _parse(rest: list[str]) -> _Parsed:
 
 
 def _execute_read(name: str, parsed: _Parsed, audit: Audit) -> dict:
+    if name == "screen.write":
+        # Local only: stdout, never Supabase. Rule 4.5's detail path.
+        from desk.screen import Screen
+
+        text = parsed.flags.get("text", "")
+        Screen().write(text)
+        audit.action(name, ACTIONS[name].risk, asked=name,
+                     argv=[name, "--text", text], outcome="written")
+        return {"ok": True, "action": name}
+
     if name == "health.check":
         # Local only. A health check that needs the network cannot tell you the
         # network is down.
