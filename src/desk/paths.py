@@ -53,6 +53,15 @@ def signals_dir() -> Path:
     return state_dir() / "signals"
 
 
+def screen_file() -> Path:
+    """Privileged detail written for Rule 4.5 — headline aloud, detail on
+    screen. Deliberately not under signals_dir(): that directory is
+    documented content-free and the owner dashboard polls it, while this
+    file carries case material and must never become something a dashboard
+    can read."""
+    return state_dir() / "screen"
+
+
 def log_dir() -> Path:
     return state_dir() / "log"
 

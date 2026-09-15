@@ -42,12 +42,16 @@ class TurnTiming:
 
 class Desk:
     def __init__(self, cfg: Config, brain: Brain, ears: Ears, mouth,
-                 audit: audit_mod.Audit) -> None:
+                 audit: audit_mod.Audit, verbose: bool = False) -> None:
         self.cfg = cfg
         self.brain = brain
         self.ears = ears
         self.mouth = mouth
         self.audit = audit
+        #: --verbose adds a terminal VIEW of the screen file. It is never the
+        #: surface itself, and the file is written the same way with or
+        #: without it — see Screen and Rule 4.5.
+        self.verbose = verbose
         self.turns = 0
         self.timings: list[TurnTiming] = []
         self._turn_task: asyncio.Task | None = None
@@ -135,6 +139,7 @@ class Desk:
             grant.revoke()
             self._turn_task = None
             await self._speak_denials()
+            self._render_screen()
             signals.set_state(signals.IDLE)
             timing.total_ms = (time.perf_counter() - started) * 1000
             stats = self.brain.last
@@ -166,6 +171,15 @@ class Desk:
             self.mouth.say_now(record.get("say", ""))
             self.audit.denial(record.get("tool", "unknown"), record.get("rule", ""),
                               record.get("say", ""), spoken=True)
+
+    def _render_screen(self) -> None:
+        """--verbose view of the screen file. A view, not the surface: the
+        file is written the same way whether or not this runs."""
+        if not self.verbose:
+            return
+        content = self.mouth.screen.read()
+        if content:
+            print(content, file=sys.stderr)
 
     # --- lifecycle -------------------------------------------------------
 
@@ -246,6 +260,7 @@ class Desk:
         self.ears.close()
         self.mouth.barge_in()
         self.mouth.stop_worker()
+        self.mouth.screen.clear()
         grant.revoke()
         with contextlib.suppress(Exception):
             self.audit.ship_decision_log()
@@ -274,10 +289,11 @@ def _auth_source() -> str:
     return "claude.ai login (check the plan — consumer terms differ on training)"
 
 
-def build(cfg: Config) -> tuple[Desk, object]:
+def build(cfg: Config, verbose: bool = False) -> tuple[Desk, object]:
     from . import ptt as ptt_mod
     from . import session
     from .mouth import Mouth
+    from .screen import Screen
     from .stt import create as create_stt
     from .tts import create as create_tts
 
@@ -287,11 +303,14 @@ def build(cfg: Config) -> tuple[Desk, object]:
     transcriber = create_stt(cfg.stt_backend, cfg.stt_model)
     voice = create_tts(cfg.tts_backend, cfg.tts_voice, cfg.tts_rate)
     ears = Ears(transcriber, cfg.sample_rate)
-    mouth = Mouth(voice)
+    # Built here, unconditionally — never gated on --verbose. --verbose only
+    # decides whether Desk *also* prints this file; the file itself exists
+    # in every configuration, launchd's no-TTY one included.
+    mouth = Mouth(voice, screen=Screen())
     brain = Brain(lambda: session.build_options(cfg))
     audit = audit_mod.Audit(host=cfg.supabase_host, service=cfg.keychain_service)
 
-    desk = Desk(cfg, brain, ears, mouth, audit)
+    desk = Desk(cfg, brain, ears, mouth, audit, verbose=verbose)
     key = ptt_mod.create(cfg.ptt_keycode, desk.on_press, desk.on_release)
     return desk, key
 
@@ -347,7 +366,7 @@ def cli(argv: list[str] | None = None) -> int:
             print(f"refusing to start: {p}", file=sys.stderr)
         return 1
 
-    desk, key = build(cfg)
+    desk, key = build(cfg, verbose=args.verbose)
     with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(desk.run(key))
     return 0

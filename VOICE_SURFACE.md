@@ -95,7 +95,7 @@ revision of this document.
 
 ## The write allowlist
 
-Seventeen actions. Everything else does not exist.
+Eighteen actions. Everything else does not exist.
 
 ### Read (no confirmation)
 
@@ -123,6 +123,7 @@ Seventeen actions. Everything else does not exist.
 | `lane.kick <lane> --confirm <word>` | medium |
 | `note.write --text <text>` | low |
 | `reminder.add --text <text>` | low |
+| `screen.write --text <text>` | low |
 
 Approval discipline (Rule 7): the item is read back in one sentence with its
 risk class, and an explicit confirm word is required. Never a bare "yeah".

@@ -185,6 +185,15 @@ def _execute_write(name: str, action, parsed: _Parsed, audit: Audit) -> dict:
                             "status": "open"})
         changed = f"wrote a {'reminder' if name == 'reminder.add' else 'note'}"
 
+    elif name == "screen.write":
+        from desk.screen import Screen
+        text = parsed.flags.get("text")
+        if not text:
+            raise ValueError("nothing to write")
+        if not Screen().write(text):
+            raise RuntimeError("no writable screen surface")
+        changed = "wrote to the screen"
+
     audit.action(name, action.risk, asked=" ".join([name, *parsed.positional]),
                  argv=[name, *parsed.positional], outcome="done", changed=changed)
     return {"ok": True, "action": name, "risk": action.risk, "changed": changed}

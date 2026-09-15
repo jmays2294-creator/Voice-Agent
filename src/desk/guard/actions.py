@@ -193,6 +193,9 @@ _ALL: tuple[Action, ...] = (
     Action("reminder.add", RISK_LOW, True,
            "Add an owner reminder.",
            flags={"text": Param("text", _text, required=False), "payload": _PAYLOAD}),
+    Action("screen.write", RISK_LOW, True,
+           "Write text to the screen, for detail Desk will not speak aloud.",
+           flags={"text": Param("text", _text)}),
 )
 
 ACTIONS: dict[str, Action] = {a.name: a for a in _ALL}

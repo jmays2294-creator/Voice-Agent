@@ -215,6 +215,17 @@ def test_action_argument_shapes_enforced(ctx):
     assert d("Bash", {"command": "desk-action lane.kick A --confirm go"}, ctx).allow is False
 
 
+def test_screen_write_allowed_without_confirmation(ctx):
+    """Rule 4.5's surface, not a state-changing action against an external
+    system — same shape as note.write, no confirm word required."""
+    dec = d("Bash", {"command": "desk-action screen.write --text hello"}, ctx)
+    assert dec.allow is True and dec.risk == "low" and dec.action == "screen.write"
+
+
+def test_screen_write_without_text_denied(ctx):
+    assert d("Bash", {"command": "desk-action screen.write"}, ctx).allow is False
+
+
 # --- network --------------------------------------------------------------
 
 def test_web_denied_without_a_grant(ctx):

@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 from . import interlock, signals
 from .diction import for_speech
+from .screen import Screen
 
 #: Barge-in budget. A cut that takes longer than this is audible as a daemon
 #: that did not hear you.
@@ -32,9 +33,13 @@ class MouthStats:
 
 
 class Mouth:
-    def __init__(self, voice, check_interlock: bool = True) -> None:
+    def __init__(self, voice, check_interlock: bool = True,
+                 screen: Screen | None = None) -> None:
         self.voice = voice
         self.check_interlock = check_interlock
+        #: Built unconditionally, never gated on a debug flag — the file
+        #: surface must exist in the shipping (no-TTY, no --verbose) config.
+        self.screen = screen if screen is not None else Screen()
         self._q: queue.Queue = queue.Queue()
         self._thread: threading.Thread | None = None
         self._running = threading.Event()
@@ -137,20 +142,34 @@ class Mouth:
 
     def reset_room(self) -> None:
         self._room_confirmed = False
+        # Case material must not sit on disk once nobody has confirmed the
+        # room is safe to show it in.
+        self.screen.clear()
 
-    def case_material_guard(self, headline: str) -> str | None:
+    def case_material_guard(self, headline: str, detail: str | None = None) -> str | None:
         """What to speak when case material is involved.
 
-        Default for privileged material is quiet: the headline aloud, the detail
-        on screen. Returns the sentence to speak, or None if the room has not
-        been confirmed yet this session.
+        Default for privileged material is quiet: the headline aloud, the
+        detail on screen. Returns the sentence to speak, or None if the
+        caller should just speak `headline` itself through the normal path.
+
+        Before anything case-specific is spoken for the first time this
+        session, this returns the room question instead — asking, and
+        holding the headline until Joel has confirmed it.
+
+        Once the room is confirmed, `detail` (if any) goes to the screen,
+        never to the mouth. If there is nowhere to write it, that is said
+        out loud rather than the detail being lost without a word — silent
+        loss is the failure mode this guard exists to remove.
         """
-        if self._room_confirmed:
-            return None
-        return (
-            "Before I read anything case-specific out loud — can you be overheard "
-            f"where you are? {headline}"
-        )
+        if not self._room_confirmed:
+            return (
+                "Before I read anything case-specific out loud — can you be overheard "
+                f"where you are? {headline}"
+            )
+        if detail and not self.screen.write(detail):
+            return f"{headline} I could not write the detail to the screen."
+        return None
 
     # --- worker ----------------------------------------------------------
 

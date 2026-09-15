@@ -134,6 +134,41 @@ def test_a_note_body_never_reaches_an_audit_row(sandbox, monkeypatch):
     assert rows[-1]["row"]["changed"] == "wrote a note"
 
 
+def test_a_screen_write_never_puts_its_text_in_an_audit_row(sandbox, monkeypatch):
+    """BLOCKING FINDING B1 from the bounced first attempt: it audited
+    argv=[name, '--text', text], putting the very detail Rule 4.5 exists to
+    keep off the spoken/logged channel into voice_audit. screen.write must
+    follow the same shape as note.write: argv is the action name alone."""
+    import desk.actions_cli as cli
+
+    paths.ensure_dirs()
+    monkeypatch.setattr(cli.cfg_mod, "load", lambda: cli.cfg_mod.Config(supabase_host=""))
+    privileged = "claimant Jane Roe, WCB G1234567"
+    assert cli.main(["screen.write", "--text", privileged]) == 0
+
+    rows = [r for r in spooled(sandbox) if r["table"] == "voice_audit"]
+    assert rows, "screen.write wrote no audit row"
+    row = rows[-1]["row"]
+    assert row["argv"] == ["screen.write"]
+    assert row["asked"] == "screen.write"
+    body = json.dumps(rows)
+    assert "Jane Roe" not in body
+    assert "G1234567" not in body
+    assert row["changed"] == "wrote to the screen"
+
+
+def test_screen_write_actually_lands_on_the_screen(sandbox, monkeypatch):
+    """The executor re-validates and executes independently of the guard —
+    prove the text it was given actually reaches the file, sanitised."""
+    import desk.actions_cli as cli
+    from desk.screen import Screen
+
+    paths.ensure_dirs()
+    monkeypatch.setattr(cli.cfg_mod, "load", lambda: cli.cfg_mod.Config(supabase_host=""))
+    assert cli.main(["screen.write", "--text", "G1234567 hearing on the third"]) == 0
+    assert Screen().read() == "G1234567 hearing on the third"
+
+
 def test_audit_rows_are_built_from_the_action_not_from_free_text(sandbox, monkeypatch):
     """`asked` is the action and its validated arguments. Those cannot contain
     a space, so a dictated sentence has no route into the field."""

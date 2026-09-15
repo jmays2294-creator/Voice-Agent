@@ -135,6 +135,53 @@ def test_the_room_is_confirmed_once_per_session(mouth):
     assert mouth.case_material_guard("anything") is not None
 
 
+def test_confirmed_room_writes_detail_to_the_screen_not_the_mouth(mouth):
+    """Default for privileged material: headline aloud, detail on screen."""
+    mouth.confirm_room()
+    result = mouth.case_material_guard("Three hearings this week.",
+                                        detail="G1234567: hearing on the third")
+    assert result is None
+    assert mouth.screen.read() == "G1234567: hearing on the third"
+
+
+def test_an_unwritable_screen_is_spoken_not_swallowed(mouth, monkeypatch):
+    """Rule 4.5's honesty property: losing the detail without saying so is
+    the failure mode this guard exists to remove."""
+    mouth.confirm_room()
+    monkeypatch.setattr(mouth.screen, "write", lambda text: False)
+    result = mouth.case_material_guard("Three hearings this week.", detail="G1234567")
+    assert result is not None
+    assert "could not write" in result
+    assert "Three hearings this week." in result
+
+
+def test_an_escape_sequence_in_the_detail_never_reaches_the_screen_file(mouth, sandbox):
+    """The in-process path from the model's tool output straight into
+    case_material_guard has no validator on it at all — sanitisation has to
+    happen at Screen.write itself, and this exercises exactly that path."""
+    mouth.confirm_room()
+    mouth.case_material_guard("headline", detail="\x1b[31mspoofed\x1b[0m case detail")
+    on_disk = mouth.screen.read()
+    assert "\x1b" not in on_disk
+    assert "spoofed" in on_disk
+
+
+def test_reset_room_clears_the_screen(mouth):
+    mouth.confirm_room()
+    mouth.case_material_guard("headline", detail="case detail")
+    assert mouth.screen.read() != ""
+    mouth.reset_room()
+    assert mouth.screen.read() == ""
+
+
+def test_case_material_guard_with_no_detail_leaves_the_screen_untouched(mouth):
+    """Unchanged behaviour for the existing caller shape: no detail, no
+    screen write, and confirmed still returns None."""
+    mouth.confirm_room()
+    assert mouth.case_material_guard("headline only") is None
+    assert mouth.screen.read() == ""
+
+
 def test_prewarm_warms_the_voice(mouth, voice):
     mouth.prewarm()
     assert voice.prewarmed is True
