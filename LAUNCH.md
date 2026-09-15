@@ -124,6 +124,25 @@ System Settings → Privacy & Security → Accessibility → add the Desk binary
 Without it the event tap is created and never fires, which looks exactly like a
 broken key. `ptt.py` raises a named error for this rather than failing silently.
 
+## 6a — The hold-to-talk key
+
+Default is right Option, keycode 61. Nothing else on macOS claims it, so there
+is nothing else to configure.
+
+The alternative is fn (keycode 63), set with `ptt_keycode` in
+`config/desk.toml`. fn is also macOS's own globe key, and by default the
+system consumes the press for input-source switching, Emoji & Symbols, or
+Dictation before Desk's event tap ever sees it. If you set `ptt_keycode = 63`:
+
+```
+System Settings → Keyboard → "Press 🌐 key to" → Do Nothing
+```
+
+`desk --check` reads that system setting at boot and prints a named warning —
+never a hard failure — when fn is configured and the system has not been set
+to Do Nothing. No warning at all means either the key is right Option, or fn
+is already clear.
+
 ## 7 — Boot checks
 
 ```sh
@@ -227,7 +246,7 @@ is a deliberate act with its own threat-model entry. It is not a config flag.
 | Symptom | Look here |
 |---|---|
 | Refuses to boot | `uv run desk --check` names the reason. Usually unpinned weights. |
-| Key does nothing | Accessibility permission (step 6). |
+| Key does nothing | Accessibility permission (step 6). If `ptt_keycode` is 63 (fn), check the globe-key warning from `desk --check` (step 6a). |
 | Silent — no speech at all | Screen-lock interlock is holding. `cat ~/.desk/signals/state` reads `deaf`. |
 | Answers arrive one turn late | The drain path. `voice_turns.rebuilt` and the barge-in count on the dashboard; more rebuilds than barge-ins means the drain is timing out on its own. |
 | Dashboard all zeros | Not the same as quiet. Check `audit-rejected.jsonl` first, then that the daemon writes `loop='mac-desk-voice'`. |

@@ -22,8 +22,11 @@ tts_rate = 0.52
 
 sample_rate = 16000
 
-# Hold-to-talk keycode. 63 is fn. Never a wake word, never VAD-triggered.
-ptt_keycode = 63
+# Hold-to-talk keycode. 61 is right Option, which nothing else on macOS
+# claims. 63 (fn) is the alternative, but the system globe-key binding has
+# to be set to Do Nothing first or macOS eats the press before Desk's event
+# tap ever sees it — see LAUNCH.md. Never a wake word, never VAD-triggered.
+ptt_keycode = 61
 
 # Named, not secret — this host ships inside the iOS app. Leave empty to run
 # Desk with audit rows spooled locally instead of shipped.

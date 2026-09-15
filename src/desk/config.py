@@ -40,8 +40,10 @@ class Config:
     tts_voice: str = "com.apple.voice.premium.en-US.Zoe"
     tts_rate: float = 0.52
     sample_rate: int = 16000
-    #: Hold-to-talk key. Never a wake word, never VAD-triggered.
-    ptt_keycode: int = 63              # fn
+    #: Hold-to-talk key. Never a wake word, never VAD-triggered. 61 is right
+    #: Option, which nothing else on macOS claims; 63 (fn) also works but only
+    #: once the system globe-key binding is Do Nothing — see main.globe_key_warning.
+    ptt_keycode: int = 61              # right Option
     supabase_host: str = ""            # named, not secret; see THREAT_MODEL.md
     keychain_service: str = "desk-supabase"
     session_logging: bool = False      # opt-in, 0600, gitignored, redacted

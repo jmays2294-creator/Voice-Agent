@@ -322,6 +322,53 @@ def verify_boot(cfg: Config) -> list[str]:
     return problems
 
 
+#: What `defaults read -g AppleFnUsageType` reports at each System Settings
+#: "Press globe key to" choice. Documented macOS behaviour, not something a
+#: cloud container can confirm against a real keyboard — mac-voice-verify
+#: does that. A value this map does not recognise is named, not guessed at.
+_GLOBE_KEY_BINDINGS: dict[str, str] = {
+    "0": "Do Nothing", "1": "Change Input Source",
+    "2": "Show Emoji & Symbols", "3": "Start Dictation",
+}
+
+
+def _read_globe_key_binding() -> str | None:
+    """The system's current fn/globe binding, or None if it cannot be read —
+    not macOS, `defaults` missing, or the preference was never set. A read
+    failure stays silent rather than risking a false warning."""
+    import subprocess
+
+    try:
+        out = subprocess.run(["defaults", "read", "-g", "AppleFnUsageType"],  # noqa: S607
+                             capture_output=True, text=True, timeout=2, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    value = out.stdout.strip()
+    return _GLOBE_KEY_BINDINGS.get(value, f"an unrecognized setting ({value!r})")
+
+
+def globe_key_warning(cfg: Config) -> str | None:
+    """A boot warning, never a blocker. Desk's default key is right Option
+    (61), which nothing on macOS claims, so this only fires when a config
+    file puts ptt_keycode back on fn (63) — where whether the press ever
+    reaches Desk's event tap depends on a system setting Desk does not own.
+    """
+    if cfg.ptt_keycode != 63:
+        return None
+    binding = _read_globe_key_binding()
+    if binding is None or binding == "Do Nothing":
+        return None
+    return (
+        f"ptt_keycode is fn (63), and the system globe key is bound to "
+        f"{binding} instead of Do Nothing, so macOS will consume the press "
+        f"before Desk's event tap sees it. Set System Settings > Keyboard > "
+        f"'Press globe key to' to Do Nothing, or leave ptt_keycode at the "
+        f"default 61 (right Option), which nothing else claims."
+    )
+
+
 def cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="desk", description="Desk voice daemon")
     parser.add_argument("--check", action="store_true",
@@ -337,6 +384,9 @@ def cli(argv: list[str] | None = None) -> int:
     cfg = load()
 
     problems = verify_boot(cfg)
+    warning = globe_key_warning(cfg)
+    if warning:
+        print(f"WARNING: {warning}", file=sys.stderr)
     if args.check:
         for p in problems:
             print(f"FAIL: {p}", file=sys.stderr)
