@@ -72,8 +72,9 @@ page, or a Supabase row written by any app user is enough — and the session
 runs with permissions bypassed, because a permission prompt is fatal to a
 voice loop.
 
-**Not mitigated in the system prompt.** A CLAUDE.md instruction is a suggestion
-to a model that an injected instruction is actively trying to override.
+**Not mitigated in the system prompt.** A prompts/desk.md instruction is a
+suggestion to a model that an injected instruction is actively trying to
+override.
 
 Mitigated structurally, in `desk/guard/`:
 

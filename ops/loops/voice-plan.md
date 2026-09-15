@@ -18,10 +18,11 @@ agent that leaks is worth less than no voice agent.
 A responsive Mac app Joel holds a key to talk to — its own application, not a
 terminal process fighting the system.
 
-1. **A real UI.** `CLAUDE.md` promises a screen three times, including Rule 4.5's
-   "speak the headline, write the detail to the screen", and no such surface
-   exists. Until it does, the privileged-material control is unimplementable.
-   This is the single most important open item; treat it as such.
+1. **A real UI.** `prompts/desk.md` promises a screen three times, including
+   Rule 4.5's "speak the headline, write the detail to the screen", and no such
+   surface exists. Until it does, the privileged-material control is
+   unimplementable. This is the single most important open item; treat it as
+   such.
 2. **A key that does not fight macOS.** `fn` collides with the system globe
    binding. Either take the key properly or move to one nothing else claims.
 3. **Packaged.** A signed `.app` with mic and Accessibility entitlements,

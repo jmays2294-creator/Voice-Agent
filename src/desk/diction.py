@@ -1,10 +1,10 @@
 """Spoken-delivery cleanup.
 
-CLAUDE.md teaches Desk to write for a mouth. This is the mechanical backstop
-for when it forgets: a synthesiser reads `**` aloud as "asterisk asterisk", and
-one stray markdown table makes an answer unlistenable.
+prompts/desk.md teaches Desk to write for a mouth. This is the mechanical
+backstop for when it forgets: a synthesiser reads `**` aloud as "asterisk
+asterisk", and one stray markdown table makes an answer unlistenable.
 
-The character lives in CLAUDE.md. This file only handles the medium.
+The character lives in prompts/desk.md. This file only handles the medium.
 """
 
 from __future__ import annotations

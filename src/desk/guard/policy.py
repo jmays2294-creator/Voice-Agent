@@ -2,9 +2,9 @@
 
 The model runs with permissions bypassed because a prompt is fatal to a voice
 loop. That makes this file, not the system prompt, the security boundary. A
-CLAUDE.md instruction is a suggestion to a model that an injected instruction is
-actively trying to override; this is a separate process that never sees tool
-output and cannot be argued with.
+prompts/desk.md instruction is a suggestion to a model that an injected
+instruction is actively trying to override; this is a separate process that
+never sees tool output and cannot be argued with.
 
 Shape of the policy:
 

@@ -26,7 +26,18 @@ DISALLOWED = [
     "NotebookEdit", "SlashCommand",
 ]
 
-CLAUDE_MD = Path(__file__).resolve().parents[2] / "CLAUDE.md"
+PERSONA = Path(__file__).resolve().parents[2] / "prompts" / "desk.md"
+
+
+def _read_persona() -> str:
+    """The system prompt. A missing or empty file is a boot failure, not a
+    session that silently runs with no character."""
+    if not PERSONA.exists():
+        raise FileNotFoundError(f"persona file not found: {PERSONA}")
+    text = PERSONA.read_text()
+    if not text.strip():
+        raise ValueError(f"persona file is empty: {PERSONA}")
+    return text
 
 
 def guard_command() -> list[str]:
@@ -60,7 +71,7 @@ def build_options(cfg: Config):
 
     from .guard.sdk_hook import pre_tool_use
 
-    system_prompt = CLAUDE_MD.read_text() if CLAUDE_MD.exists() else None
+    system_prompt = _read_persona()
 
     return ClaudeAgentOptions(
         model=cfg.model,
