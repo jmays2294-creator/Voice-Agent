@@ -11,6 +11,17 @@
 -- at 3am, which is the exact silent-failure shape this department is built
 -- against. Audit every constraint after a LIKE clone; do not discover them one
 -- failed insert at a time.
+--
+-- 2026-09-16: that audit missed a fourth, and it proves the warning above. The
+-- surface vocabulary below was corrected to (owner_app|infra|both) without the
+-- DEFAULT on line 49 following it, so owner_app_improvements defaulted to 'ios'
+-- -- a value its own CHECK rejects. Every insert omitting surface failed. It went
+-- unseen for two days because only one insert was ever attempted, and that one
+-- named surface explicitly. Fixed here and on the live project. The full sweep
+-- has now been run: surface was the only illegal default across both tables;
+-- the other nineteen (category, severity, status, source, risk_class, gate_a/b/c,
+-- dept) all satisfy their own CHECK lists. A constraint and its default are one
+-- change, not two.
 
 -- 1. Departments are a closed set, enforced on three tables. Widen together or
 --    loop_runs rejects the rows the new schedules write.
@@ -46,7 +57,7 @@ alter table public.voice_improvements alter column source  set default 'voice_sw
 create table if not exists public.owner_app_improvements
   (like public.app_improvements including all);
 alter table public.owner_app_improvements alter column dept    set default 'owner_app';
-alter table public.owner_app_improvements alter column surface set default 'ios';
+alter table public.owner_app_improvements alter column surface set default 'owner_app';
 alter table public.owner_app_improvements alter column source  set default 'owner_sweep';
 
 -- 3. The cloned vocabularies, corrected for these surfaces.
