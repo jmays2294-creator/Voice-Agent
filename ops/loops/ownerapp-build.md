@@ -8,10 +8,25 @@ identical and is not restated here.
 
 Differences that matter:
 
-- The repository is whichever the shape decision named. Until that item is
-  approved there is nothing to build: close the row `noop` and stop. **Do not
-  pick a stack yourself to get unblocked.**
-- Gate A is that project's own test and lint commands, not this repo's.
+- The repository is `jmays2294-creator/owner-app`. Decided 2026-09-16 on item
+  `4a5f4659`: **native SwiftUI, in its own repository.** Build the owner app
+  nowhere else — in particular not in `thecompdesk-app`, which is a different
+  product with a different threat model and a mirroring chore this surface does
+  not share. **Do not pick a stack yourself.** If an item seems to need a
+  different one, that is a question for the plan loop, not a decision for you:
+  set it back to `planned` and say so.
+- **Gate A is not reachable from the cloud. That is the price of SwiftUI, and
+  it was paid knowingly.** A cloud loop has no Xcode, no Swift toolchain and no
+  Simulator, so it cannot compile or test this project. You therefore push a
+  branch that *nothing has verified*: leave `gate_a` at `pending`, and say on
+  the item that the branch is pushed, not green. `mac-ownerapp-verify` owns
+  Gate A here.
+
+  Claiming a build, test or Simulator result you did not observe is the same
+  failure as claiming a latency number with no microphone (README rule 4), and
+  it is worse on this surface, because a green Gate A is what tells Joel a
+  branch is safe to look at. An honest `pending` is always better than an
+  invented `pass`.
 - **No claimant data reaches this surface.** A query touching a case table is a
   stop, not a review comment — `saved_cases`, `case_events`, `firm_case_*`,
   `c3_*`, `worker_*`, `recovery_*`, `comp_buddy_chats`, `advisor_sessions` and
