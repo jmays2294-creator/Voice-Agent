@@ -19,6 +19,7 @@ from typing import ClassVar
 
 from . import audit as audit_mod
 from . import grant, interlock, paths, signals
+from . import screen as screen_mod
 from .brain import Brain, require_pinned_model
 from .config import Config, load
 from .ears import Ears
@@ -42,12 +43,13 @@ class TurnTiming:
 
 class Desk:
     def __init__(self, cfg: Config, brain: Brain, ears: Ears, mouth,
-                 audit: audit_mod.Audit) -> None:
+                 audit: audit_mod.Audit, screen: screen_mod.Screen) -> None:
         self.cfg = cfg
         self.brain = brain
         self.ears = ears
         self.mouth = mouth
         self.audit = audit
+        self.screen = screen
         self.turns = 0
         self.timings: list[TurnTiming] = []
         self._turn_task: asyncio.Task | None = None
@@ -274,7 +276,16 @@ def _auth_source() -> str:
     return "claude.ai login (check the plan — consumer terms differ on training)"
 
 
-def build(cfg: Config) -> tuple[Desk, object]:
+def _boot_screen(verbose: bool) -> screen_mod.Screen:
+    """Construct Rule 4.5's on-screen half and make the surface exist on disk
+    from the first boot — unconditionally, never gated on --verbose. Under
+    launchd there is no TTY, so the file is the only surface there is."""
+    scr = screen_mod.Screen(verbose=verbose)
+    scr.clear()
+    return scr
+
+
+def build(cfg: Config, verbose: bool = False) -> tuple[Desk, object]:
     from . import ptt as ptt_mod
     from . import session
     from .mouth import Mouth
@@ -290,8 +301,9 @@ def build(cfg: Config) -> tuple[Desk, object]:
     mouth = Mouth(voice)
     brain = Brain(lambda: session.build_options(cfg))
     audit = audit_mod.Audit(host=cfg.supabase_host, service=cfg.keychain_service)
+    scr = _boot_screen(verbose)
 
-    desk = Desk(cfg, brain, ears, mouth, audit)
+    desk = Desk(cfg, brain, ears, mouth, audit, scr)
     key = ptt_mod.create(cfg.ptt_keycode, desk.on_press, desk.on_release)
     return desk, key
 
@@ -347,7 +359,7 @@ def cli(argv: list[str] | None = None) -> int:
             print(f"refusing to start: {p}", file=sys.stderr)
         return 1
 
-    desk, key = build(cfg)
+    desk, key = build(cfg, verbose=args.verbose)
     with contextlib.suppress(KeyboardInterrupt):
         asyncio.run(desk.run(key))
     return 0

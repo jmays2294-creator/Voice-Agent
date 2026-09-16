@@ -53,6 +53,14 @@ def signals_dir() -> Path:
     return state_dir() / "signals"
 
 
+def screen_file() -> Path:
+    """Rule 4.5's on-screen half: the headline is spoken, the detail lands
+    here. Privileged, so it lives directly under state_dir() (mode 0600) and
+    NOT under signals_dir(), which is documented content-free and polled by
+    the owner dashboard."""
+    return state_dir() / "screen"
+
+
 def log_dir() -> Path:
     return state_dir() / "log"
 
