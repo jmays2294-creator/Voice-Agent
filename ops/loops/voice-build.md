@@ -24,6 +24,15 @@ your job is to implement it well and prove it. Read COMMON.md, then LOOP_CONTRAC
 6. Green → commit, push the branch, `status='implemented'`, fill
    `change_summary` / `change_reason` / `change_impact` in plain English. Joel
    reads those, not the diff.
+
+   **Never write a gate column.** Not `gate_b`, not `gate_b_at`, not
+   `gate_b_agent`, not `gate_b_detail` — not even to clear a stale verdict from
+   a commit you have replaced. Setting `status='implemented'` re-opens Gate B by
+   itself: the database stamps `implemented_at`, archives any existing verdict
+   into `gate_b_history`, and resets `gate_b` to `pending`, in the same
+   statement. You cannot leave a rebuilt item hidden from review by forgetting
+   something, and you cannot delete the reviewer's findings by remembering
+   something. See `sql/004_voice_gate_flow.sql`.
 7. Red and you cannot fix it inside the item's scope → **delete the branch**,
    set `status='planned'`, and write in `implementation_note` exactly what
    blocked you. Then close the row `partial`. Pushing red and hoping is the one
@@ -52,5 +61,7 @@ You may write one — Joel chose Gate B review over freezing the path. But:
 
 ## Never
 
-Merge. Touch `main`. Deploy. Mark anything verified. Claim a latency number —
-you have no audio device. Take a second item because the first was quick.
+Merge. Touch `main`. Deploy. Mark anything verified. Write a gate column. Run
+DDL against `voice_improvements` — a migration file in `sql/` is yours to write,
+applying it is Joel's. Claim a latency number — you have no audio device. Take a
+second item because the first was quick.

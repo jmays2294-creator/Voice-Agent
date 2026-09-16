@@ -14,7 +14,11 @@ device held, no launchd job loaded that was not loaded before.
 
 1. Kill switch. Run row (`loop='mac-voice-verify'`, `dept='voice'`, `host='mac'`).
 2. `git fetch` and take every `voice_improvements` row with `status='implemented'`
-   and `gate_b='pass'`. None → `noop` and stop; do not verify unreviewed work.
+   that is **not** in `public.voice_gate_b_queue`. None → `noop` and stop; do not
+   verify unreviewed work. That view is the one definition of "still awaiting
+   Gate B", so its complement is the one definition of "reviewed and passed on
+   this exact commit" — a `gate_b='pass'` left over from a commit that has since
+   been rebuilt is not one, and the database clears it on rebuild anyway.
 3. For each branch, check it out and verify the item actually does what it
    claimed **on the surface it claimed**, not in a unit test.
 

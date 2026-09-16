@@ -22,6 +22,13 @@ below is an exception to it — it is the part that only applies to a voice agen
 - `loop_runs.routine` = this routine's id (the file name here without `.md`),
   so the dashboard can show it running. `dept` is `voice` or `owner_app`,
   `host` is `cloud` or `mac`.
+- **A queue is a view, never a predicate in one of these files.** The voice
+  queues are `public.voice_gate_b_queue` and its complement; what no queue can
+  see is `public.voice_stuck_items`, and every voice loop reads that one too.
+  Twice a selection rule lived in prose here, twice a copy drifted from the
+  other, and the second time a P0 guard change was invisible to review for 111
+  minutes while every loop reported healthy. Do not transcribe a predicate out
+  of `sql/004_voice_gate_flow.sql` into a routine; name the view.
 - Supabase is project `ltibymvlytodkemdeeox` through the Supabase connector
   (`execute_sql`). **A routine without that connector cannot work** — it cannot
   read the kill switch or open a run row.
@@ -49,7 +56,12 @@ survivable at all:
 src/desk/guard/**          config/weights.sha256
 config/pf/**               CLAUDE.md
 config/desk.toml (egress, model, stt/tts backend keys)
+sql/004_voice_gate_flow.sql
 ```
+
+The last one is there because it defines what reaches Gate B at all. A change
+to it does not alter what Desk may do; it alters what gets looked at before
+Desk may do it, which is the same thing one remove.
 
 A change touching any of them is `risk_class='high'`, which means it never
 auto-ships — a database trigger enforces that, not a convention — Gate B review
