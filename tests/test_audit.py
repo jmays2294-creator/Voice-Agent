@@ -216,6 +216,60 @@ def test_every_allowlisted_action_is_actually_executable(sandbox, monkeypatch):
     assert dead == [], dead
 
 
+def test_free_text_never_reaches_an_audit_row_on_the_error_path(sandbox, monkeypatch):
+    """The success path redacts free text down to the action name and its
+    validated positional arguments (see `test_audit_rows_are_built_from_the_
+    action_not_from_free_text` above). The error path in `main`'s `except`
+    block did not: it composed the audit row from the raw argv, which for
+    every action with a `_text`-checked flag includes whatever the caller
+    typed. Drive every action down the forced-raise branch and confirm a
+    sentinel placed in a free-text flag reaches neither `argv`, `asked` nor
+    `outcome`.
+    """
+    import desk.actions_cli as cli
+    from desk.guard.actions import ACTIONS, _text
+
+    paths.ensure_dirs()
+    monkeypatch.setattr(cli.cfg_mod, "load", lambda: cli.cfg_mod.Config(supabase_host=""))
+
+    sample = {"window": "24h", "lane": "lane-a", "id": "item-12", "target": "app",
+              "queue": "app"}
+
+    for name, action in ACTIONS.items():
+        sentinel = f"SENTINEL-{name.replace('.', '-')}-do-not-leak"
+        argv = [name]
+        for spec in action.positional:
+            if spec.required:
+                argv.append(sample[spec.name])
+        text_flags = [key for key, spec in action.flags.items() if spec.check is _text]
+        for key, spec in action.flags.items():
+            if spec.check is _text:
+                argv += [f"--{key}", sentinel]
+            elif spec.required or key == "confirm":
+                argv += [f"--{key}", "approve" if key == "confirm" else "a-value"]
+
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr(cli.cfg_mod, "load", lambda: cli.cfg_mod.Config(supabase_host=""))
+            m.setattr(cli, "_select", lambda a, t, q: [{"id": "item-12",
+                                                        "status": "planned"}])
+
+            def boom(*a, name=name, sentinel=sentinel, **k):
+                raise RuntimeError(f"boom for {name}: {sentinel}")
+
+            m.setattr(cli, "_execute_write" if action.writes else "_execute_read", boom)
+            code = cli.main(argv)
+
+        assert code != 0, f"{name} did not fail on the forced-raise path"
+        row = [r for r in spooled(sandbox) if r["table"] == "voice_audit"][-1]["row"]
+        assert row["action"] == name
+        if text_flags:
+            body = json.dumps(row)
+            assert sentinel not in body, (
+                f"{name} leaked a free-text flag ({text_flags}) into the audit "
+                f"row on the error path"
+            )
+
+
 def test_a_write_that_declares_a_confirmation_still_demands_one(sandbox, monkeypatch):
     import desk.actions_cli as cli
 

@@ -90,7 +90,13 @@ def main(argv: list[str] | None = None) -> int:
         else:
             result = _execute_read(name, parsed, audit)
     except Exception as exc:
-        audit.action(name, action.risk, " ".join(args), args, outcome=f"error: {exc}")
+        # Mirror the success path: the row is built from the action name and
+        # its validated positional arguments only, never the raw argv (which
+        # for a free-text action carries whatever the caller typed in a flag)
+        # and never the exception's own string, which can quote that same
+        # caller text back.
+        audit.action(name, action.risk, asked=" ".join([name, *parsed.positional]),
+                     argv=[name, *parsed.positional], outcome=f"error: {type(exc).__name__}")
         return _fail(f"{name} failed: {exc}", EXIT_ERROR)
 
     print(json.dumps(result, default=str))
