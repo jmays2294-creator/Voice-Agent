@@ -47,8 +47,14 @@ alter table public.voice_improvements
 -- Fires before the autoship trigger ('g' sorts before 'n'), and the two do not
 -- touch the same columns.
 -- ---------------------------------------------------------------------------
+-- `set search_path = ''` so the function cannot be redirected by a caller's
+-- search_path. Everything it calls is schema-qualified or in pg_catalog. The
+-- four older tg_* functions on these tables predate this and still carry the
+-- advisor's function_search_path_mutable warning; they are not this change's
+-- to fix, but a new one should not be added to the pile.
 create or replace function public.tg_voice_improvements_gate_flow()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql
+set search_path = '' as $$
 declare
   entering_implemented boolean;
 begin

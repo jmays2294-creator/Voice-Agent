@@ -119,6 +119,17 @@ def test_the_trigger_stamps_the_column_the_queue_depends_on():
     )
 
 
+def test_the_trigger_function_pins_its_search_path():
+    sql = migration_text()
+    fn = sql[sql.index("create or replace function public.tg_voice_improvements_gate_flow"):]
+    head = fn[: fn.index("$$")]
+    assert "set search_path" in head, (
+        "an unpinned search_path lets a caller redirect what the function "
+        "resolves; Supabase's linter reports it and this one should not join "
+        "the functions already on that list"
+    )
+
+
 def test_the_views_do_not_bypass_row_level_security():
     sql = migration_text()
     for view in (QUEUE_VIEW, STUCK_VIEW):
